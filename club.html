@@ -1,0 +1,1865 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <title>Run Green Club</title>
+  <meta name="description" content="Run Green private club dashboard." />
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --green: #22c55e;
+      --green-light: #16a34a;
+      --green-dim: #16a34a;
+      --bg: #eef8f1;
+      --body: #e8fbea;
+      --card: #ffffff;
+      --card-soft: #f8fff9;
+      --border: #dfe7e2;
+      --border-soft: #e5e5ea;
+      --text: #111111;
+      --muted: #6e6e73;
+      --muted-2: #6e6e73;
+      --danger: #ef4444;
+      --page-gradient:
+        radial-gradient(circle at top left, #dcfce7 0, transparent 38%),
+        linear-gradient(180deg, #e8fbea 0%, #f5fff7 45%, #e8fbea 100%);
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --green: #44d965;
+        --green-light: #4ade80;
+        --green-dim: #16a34a;
+        --bg: #03130a;
+        --body: #03130a;
+        --card: #112918;
+        --card-soft: #0c2012;
+        --border: rgba(34,197,94,0.14);
+        --border-soft: rgba(255,255,255,0.07);
+        --text: #f0fdf4;
+        --muted: #8a958f;
+        --muted-2: #9ca3af;
+        --page-gradient:
+          radial-gradient(circle at top left, rgba(74,222,128,0.18), transparent 34%),
+          radial-gradient(circle at bottom right, rgba(34,197,94,0.16), transparent 42%),
+          linear-gradient(180deg, #0a2414 0%, #10351f 48%, #092817 100%);
+      }
+    }
+
+    *, *::before, *::after {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--page-gradient);
+      color: var(--text);
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background:
+        radial-gradient(ellipse 70% 45% at 15% -10%, rgba(74,222,128,0.14) 0%, transparent 65%),
+        radial-gradient(ellipse 55% 35% at 85% 105%, rgba(22,163,74,0.12) 0%, transparent 62%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      border-bottom: 1px solid var(--border);
+      background: rgba(255,255,255,0.72);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+    }
+
+    @media (prefers-color-scheme: dark) {
+      header {
+        background: rgba(8,31,17,0.84);
+      }
+    }
+
+    .header-inner {
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 0 24px;
+      height: 68px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .logo {
+      width: 42px;
+      height: 42px;
+      border-radius: 12px;
+      overflow: hidden;
+      flex-shrink: 0;
+      border: 1px solid var(--border);
+      background: var(--card-soft);
+    }
+
+    .logo img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .brand-text h1 {
+      font-size: 17px;
+      font-weight: 700;
+      margin: 0;
+      letter-spacing: -0.3px;
+    }
+
+    .brand-text .subtitle {
+      font-size: 12px;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+
+    .top-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .user-pill {
+      font-size: 13px;
+      color: var(--green-light);
+      background: rgba(34,197,94,0.08);
+      border: 1px solid rgba(34,197,94,0.22);
+      border-radius: 999px;
+      padding: 7px 14px;
+      max-width: 220px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    main {
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 36px 24px 80px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    button {
+      border: 0;
+      cursor: pointer;
+      font-family: inherit;
+      font-weight: 600;
+      font-size: 14px;
+      border-radius: 999px;
+      padding: 9px 18px;
+      transition: all 0.15s ease;
+      color: #fff;
+      white-space: nowrap;
+    }
+
+    button:hover {
+      transform: translateY(-1px);
+    }
+
+    button:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .btn-primary {
+      background: var(--green-dim);
+      box-shadow: 0 0 0 1px rgba(34,197,94,0.4), 0 4px 16px rgba(34,197,94,0.18);
+    }
+
+    .btn-primary:hover {
+      background: var(--green);
+    }
+
+    .btn-ghost {
+      background: transparent;
+      color: var(--muted-2);
+      border: 1px solid var(--border-soft);
+    }
+
+    .btn-ghost:hover {
+      background: var(--card-soft);
+      color: var(--text);
+    }
+
+    .btn-danger-soft {
+      background: rgba(239,68,68,0.1);
+      color: #fca5a5;
+      border: 1px solid rgba(239,68,68,0.25);
+    }
+
+    .card,
+    .login-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      padding: 28px;
+      box-shadow: 0 18px 60px rgba(0,0,0,0.10);
+    }
+
+    .login-wrap {
+      min-height: calc(100vh - 120px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .login-card {
+      width: 100%;
+      max-width: 440px;
+      padding: 40px;
+    }
+
+    .login-eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--green-light);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-bottom: 14px;
+    }
+
+    .login-eyebrow::before {
+      content: '';
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--green);
+      box-shadow: 0 0 8px var(--green);
+    }
+
+    .login-card h2 {
+      font-size: 26px;
+      font-weight: 800;
+      margin: 0 0 8px;
+    }
+
+    .helper {
+      color: var(--muted-2);
+      font-size: 14px;
+      line-height: 1.6;
+      margin: 0 0 28px;
+    }
+
+    .field {
+      margin-bottom: 16px;
+    }
+
+    label {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      color: var(--muted-2);
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+
+    input, select {
+      width: 100%;
+      padding: 13px 16px;
+      border-radius: 12px;
+      border: 1px solid var(--border-soft);
+      background: var(--card-soft);
+      color: var(--text);
+      font-size: 15px;
+      font-family: inherit;
+      outline: none;
+    }
+
+    input:focus, select:focus {
+      border-color: rgba(34,197,94,0.5);
+      box-shadow: 0 0 0 3px rgba(34,197,94,0.1);
+    }
+
+    select option {
+      background: var(--card);
+      color: var(--text);
+    }
+
+    .button-row {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 6px;
+    }
+
+    .status {
+      margin-top: 14px;
+      font-size: 14px;
+      color: #fca5a5;
+      min-height: 20px;
+    }
+
+    .dash-header {
+      margin-bottom: 24px;
+    }
+
+    .dash-header h2 {
+      font-size: 32px;
+      font-weight: 800;
+      margin: 0 0 6px;
+      letter-spacing: -0.6px;
+    }
+
+    .dash-helper {
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.6;
+    }
+
+    .section-divider {
+      border: 0;
+      border-top: 1px solid var(--border-soft);
+      margin: 28px 0 24px;
+    }
+
+    .stat-grid {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 12px;
+      margin: 24px 0;
+    }
+
+    .stat {
+      background: var(--card-soft);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 18px 16px;
+    }
+
+    .stat-label {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 10px;
+    }
+
+    .stat-value {
+      font-size: 22px;
+      font-weight: 800;
+      color: var(--text);
+      letter-spacing: -0.5px;
+      line-height: 1.1;
+    }
+
+    .stat-value.accent {
+      color: var(--green-light);
+    }
+
+    .members-list {
+      display: grid;
+      gap: 12px;
+    }
+
+    .member-card {
+      background: var(--card-soft);
+      border: 1px solid var(--border-soft);
+      border-radius: 18px;
+      padding: 20px;
+    }
+
+    .member-top {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      align-items: flex-start;
+    }
+
+    .member-name {
+      font-size: 18px;
+      font-weight: 800;
+      margin-bottom: 4px;
+    }
+
+    .member-meta {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .member-stats {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 10px;
+      margin-top: 18px;
+    }
+
+    .mini-stat {
+      border: 1px solid var(--border-soft);
+      border-radius: 14px;
+      padding: 12px;
+      background: var(--card-soft);
+    }
+
+    .mini-label {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+
+    .mini-value {
+      font-size: 15px;
+      font-weight: 800;
+    }
+
+    .activities-list {
+      display: grid;
+      gap: 10px;
+      margin-top: 16px;
+      padding-top: 14px;
+      border-top: 1px solid var(--border-soft);
+    }
+
+    .activity-card {
+      background: var(--card-soft);
+      border: 1px solid var(--border-soft);
+      border-radius: 16px;
+      padding: 16px 18px;
+      display: grid;
+      grid-template-columns: 1.3fr repeat(5, 1fr);
+      gap: 14px;
+      align-items: center;
+    }
+
+    .activity-card.selected-activity {
+      border-color: rgba(74,222,128,0.75);
+      background: rgba(34,197,94,0.10);
+      box-shadow: 0 0 0 1px rgba(74,222,128,0.22);
+    }
+
+    .selected-date-toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 12px 14px;
+      border: 1px solid rgba(74,222,128,0.28);
+      border-radius: 14px;
+      background: rgba(34,197,94,0.06);
+      color: var(--green-light);
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .activity-date {
+      font-weight: 700;
+      font-size: 15px;
+    }
+
+    .activity-small {
+      color: var(--muted);
+      font-size: 12px;
+      margin-top: 4px;
+    }
+
+    .metric-label {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 5px;
+    }
+
+    .metric-value {
+      font-size: 15px;
+      font-weight: 700;
+    }
+
+    .metric-value.green {
+      color: var(--green-light);
+    }
+
+    .year-group {
+      border: 1px solid rgba(34,197,94,0.16);
+      border-radius: 18px;
+      background: var(--card-soft);
+      overflow: hidden;
+    }
+
+    .year-header {
+      width: 100%;
+      border-radius: 0;
+      padding: 18px 20px;
+      background: var(--card-soft);
+      color: var(--text);
+      border: 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      text-align: left;
+    }
+
+    .year-header:hover {
+      background: rgba(34,197,94,0.10);
+    }
+
+    .year-title {
+      font-size: 18px;
+      font-weight: 900;
+    }
+
+    .year-summary {
+      color: var(--muted);
+      font-size: 13px;
+      margin-top: 4px;
+    }
+
+    .year-chevron {
+      color: var(--green-light);
+      font-size: 20px;
+      font-weight: 900;
+    }
+
+    .year-months {
+      display: grid;
+      gap: 10px;
+      padding: 12px;
+    }
+
+    .month-group {
+      border: 1px solid var(--border-soft);
+      border-radius: 16px;
+      background: var(--card-soft);
+      overflow: hidden;
+    }
+
+    .month-header {
+      width: 100%;
+      border-radius: 0;
+      padding: 16px 18px;
+      background: var(--card-soft);
+      color: var(--text);
+      border: 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      text-align: left;
+    }
+
+    .month-header:hover {
+      background: rgba(34,197,94,0.08);
+    }
+
+    .month-title {
+      font-size: 16px;
+      font-weight: 800;
+    }
+
+    .month-summary {
+      color: var(--muted);
+      font-size: 13px;
+      margin-top: 4px;
+    }
+
+    .month-chevron {
+      color: var(--green-light);
+      font-size: 18px;
+      font-weight: 800;
+    }
+
+    .member-month-detail {
+      display: grid;
+      gap: 10px;
+      padding: 12px;
+    }
+
+    .chart-card {
+      background: var(--card-soft);
+      border: 1px solid var(--border-soft);
+      border-radius: 18px;
+      padding: 22px;
+    }
+
+    .member-chart-card {
+      margin: 0 0 4px;
+    }
+
+    .chart-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 12px;
+      margin-bottom: 18px;
+    }
+
+    .chart-title {
+      font-size: 16px;
+      font-weight: 700;
+      margin: 0 0 4px;
+    }
+
+    .chart-subtitle {
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .chart-control {
+      width: 200px;
+      padding: 9px 12px;
+      border-radius: 10px;
+      border: 1px solid var(--border-soft);
+      background: var(--card-soft);
+      color: var(--text);
+      font-size: 13px;
+    }
+
+    .chart-wrap {
+      height: 260px;
+      position: relative;
+    }
+
+    .empty {
+      text-align: center;
+      color: var(--muted);
+      padding: 52px 20px;
+      background: var(--card-soft);
+      border: 1px dashed var(--border-soft);
+      border-radius: 16px;
+      font-size: 15px;
+    }
+
+    .footer-note {
+      margin-top: 32px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.6;
+      padding-top: 20px;
+      border-top: 1px solid var(--border-soft);
+    }
+
+    .footer-note a {
+      color: var(--green-light);
+      font-weight: 700;
+      text-decoration: none;
+    }
+
+    @media (max-width: 900px) {
+      .stat-grid,
+      .member-stats {
+        grid-template-columns: repeat(3, 1fr);
+      }
+
+      .activity-card {
+        grid-template-columns: 1fr 1fr;
+      }
+
+      .header-inner {
+        flex-wrap: wrap;
+        height: auto;
+        padding: 14px 20px;
+      }
+
+      .top-actions {
+        width: 100%;
+      }
+
+      .member-top,
+      .chart-header {
+        flex-direction: column;
+      }
+
+      .chart-control {
+        width: 100%;
+      }
+    }
+
+    @media (max-width: 520px) {
+      main {
+        padding: 20px 16px 60px;
+      }
+
+      .card {
+        padding: 20px;
+      }
+
+      .stat-grid,
+      .member-stats,
+      .activity-card {
+        grid-template-columns: 1fr;
+      }
+
+      .top-actions button,
+      .button-row button {
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <header>
+    <div class="header-inner">
+      <div class="brand">
+        <div class="logo">
+          <img src="assets/icon.png" alt="Run Green icon">
+        </div>
+
+        <div class="brand-text">
+          <h1>Run Green</h1>
+          <div class="subtitle">Club dashboard</div>
+        </div>
+      </div>
+
+      <div id="signedInActions" class="top-actions hidden">
+        <div id="userDisplayName" class="user-pill"></div>
+        <button class="btn-ghost" onclick="goBack()">Back</button>
+        <button class="btn-ghost" onclick="loadClubDashboard()">Refresh</button>
+        <button class="btn-danger-soft" onclick="signOut()">Sign out</button>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section id="loginSection" class="login-wrap">
+      <div class="login-card">
+        <div class="login-eyebrow">Secure access</div>
+        <h2>Sign in to view club</h2>
+        <p class="helper">Use the same email and password from the Run Green app.</p>
+
+        <div class="field">
+          <label for="email">Email</label>
+          <input id="email" type="email" autocomplete="email" placeholder="you@example.com" />
+        </div>
+
+        <div class="field">
+          <label for="password">Password</label>
+          <input id="password" type="password" autocomplete="current-password" placeholder="••••••••" />
+        </div>
+
+        <div class="button-row">
+          <button id="loginButton" class="btn-primary" onclick="signIn()">Sign in</button>
+          <button class="btn-ghost" onclick="checkSession()">Check session</button>
+        </div>
+
+        <div id="loginStatus" class="status"></div>
+      </div>
+    </section>
+
+    <section id="clubSection" class="hidden">
+      <div class="card">
+        <div class="dash-header">
+          <h2 id="clubTitle">Club dashboard</h2>
+          <p id="clubDescription" class="dash-helper">Loading club details...</p>
+        </div>
+
+        <div class="stat-grid">
+          <div class="stat">
+            <div class="stat-label">Club activities</div>
+            <div id="clubRides" class="stat-value accent">0</div>
+          </div>
+
+          <div class="stat">
+            <div class="stat-label">Distance</div>
+            <div id="clubDistance" class="stat-value">0</div>
+          </div>
+
+          <div class="stat">
+            <div class="stat-label">Calories</div>
+            <div id="clubCalories" class="stat-value">0</div>
+          </div>
+
+          <div class="stat">
+            <div class="stat-label">Elevation</div>
+            <div id="clubElevation" class="stat-value">0</div>
+          </div>
+
+          <div class="stat">
+            <div class="stat-label">Duration</div>
+            <div id="clubDuration" class="stat-value">0</div>
+          </div>
+
+          <div class="stat">
+            <div class="stat-label">Best benchmark</div>
+            <div id="clubBenchmark" class="stat-value accent">0%</div>
+          </div>
+        </div>
+
+        <hr class="section-divider" />
+
+        <div class="dash-header">
+          <h2>Members</h2>
+          <p class="dash-helper">Expand a member, then expand a year and month to view activities and charts.</p>
+        </div>
+
+        <div id="membersList" class="members-list"></div>
+
+        <p class="footer-note">
+          Run Green respects your privacy. Group activity summaries are only visible to members of this private group.
+          View the
+          <a href="https://runwalk.thegreenportfolio.ca/privacy.html" target="_blank" rel="noopener noreferrer">
+            Privacy & Safety Policy
+          </a>.
+        </p>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const SUPABASE_URL = "https://wstnsrizuhzezectivwf.supabase.co";
+    const SUPABASE_KEY = "sb_publishable_GE5PhqdYjJ3RCcXgkJxjeA_Ry9Oh-Oz";
+
+    const client = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    let currentUser = null;
+    let currentData = null;
+    let expandedMembers = new Set();
+    let expandedMemberYears = new Set();
+    let expandedMemberMonths = new Set();
+    let selectedMemberChartDates = {};
+    let selectedMemberChartMetrics = {};
+    let memberCharts = {};
+
+    const loginSection = document.getElementById("loginSection");
+    const clubSection = document.getElementById("clubSection");
+    const signedInActions = document.getElementById("signedInActions");
+    const userDisplayName = document.getElementById("userDisplayName");
+    const loginStatus = document.getElementById("loginStatus");
+
+    const params = new URLSearchParams(window.location.search);
+    const groupId = params.get("group_id");
+
+    async function checkSession() {
+      const { data, error } = await client.auth.getSession();
+
+      if (error) {
+        showLoginStatus(error.message);
+        return;
+      }
+
+      const session = data.session;
+
+      if (session && session.user) {
+        currentUser = session.user;
+        showClub();
+        await loadProfile(session.user);
+        await loadClubDashboard();
+      } else {
+        showLogin();
+      }
+    }
+
+    async function signIn() {
+      const email = document.getElementById("email").value.trim();
+      const password = document.getElementById("password").value;
+
+      if (!email || !password) {
+        showLoginStatus("Please enter your email and password.");
+        return;
+      }
+
+      setLoginLoading(true);
+      showLoginStatus("");
+
+      const { data, error } = await client.auth.signInWithPassword({
+        email,
+        password
+      });
+
+      setLoginLoading(false);
+
+      if (error) {
+        showLoginStatus(error.message);
+        return;
+      }
+
+      currentUser = data.user;
+      showClub();
+      await loadProfile(data.user);
+      await loadClubDashboard();
+    }
+
+    async function signOut() {
+      await client.auth.signOut();
+
+      currentUser = null;
+      currentData = null;
+      expandedMembers.clear();
+      expandedMemberYears.clear();
+      expandedMemberMonths.clear();
+      selectedMemberChartDates = {};
+      selectedMemberChartMetrics = {};
+      destroyMemberCharts();
+
+      showLogin();
+    }
+
+    async function loadProfile(user) {
+      const { data, error } = await client
+        .from("profiles")
+        .select("display_name, email")
+        .eq("id", user.id)
+        .single();
+
+      if (error) {
+        userDisplayName.textContent = user.email || "Signed in";
+        return;
+      }
+
+      userDisplayName.textContent =
+        data.display_name || data.email || user.email || "Signed in";
+    }
+
+    async function loadClubDashboard() {
+      if (!currentUser) return;
+
+      if (!groupId) {
+        renderError("Missing group_id in the page URL.");
+        return;
+      }
+
+      const { data, error } = await client.rpc("get_run_group_dashboard", {
+        p_group_id: groupId
+      });
+
+      if (error) {
+        renderError(error.message);
+        return;
+      }
+
+      currentData = data;
+
+      renderClubHeader();
+      renderClubTotals();
+      renderMembers();
+      renderOpenMemberCharts();
+    }
+
+    function renderClubHeader() {
+      const group = currentData.group || {};
+
+      document.getElementById("clubTitle").textContent =
+        group.name || "Club dashboard";
+
+      const typeLabel = groupTypeLabel(group.group_type);
+
+      document.getElementById("clubDescription").textContent =
+        group.description
+          ? `${typeLabel} • ${group.description}`
+          : `${typeLabel} • Private Run Green group`;
+    }
+
+    function renderClubTotals() {
+      const totals = currentData.totals || {};
+
+      document.getElementById("clubRides").textContent =
+        Number(totals.ride_count || 0);
+
+      document.getElementById("clubDistance").textContent =
+        `${formatNumber(totals.distance, 1)} ${totals.distance_unit || ""}`;
+
+      document.getElementById("clubCalories").textContent =
+        `${Math.round(Number(totals.calories) || 0)} kcal`;
+
+      document.getElementById("clubElevation").textContent =
+        `${formatNumber(totals.elevation, 0)} ${totals.elevation_unit || ""}`;
+
+      document.getElementById("clubDuration").textContent =
+        formatDuration(totals.duration_seconds || 0);
+
+      document.getElementById("clubBenchmark").textContent =
+        `${formatNumber(totals.best_benchmark, 1)}%`;
+    }
+
+    function renderMembers() {
+      const list = document.getElementById("membersList");
+      const members = currentData.members || [];
+
+      destroyMemberCharts();
+
+      if (!members.length) {
+        list.innerHTML = `<div class="empty">No members found.</div>`;
+        return;
+      }
+
+      list.innerHTML = members.map(member => memberCardHTML(member)).join("");
+    }
+
+    function memberCardHTML(member) {
+      const totals = member.totals || {};
+      const activities = member.activities || [];
+      const isExpanded = expandedMembers.has(member.user_id);
+      const name = member.display_name || member.email || `Member ${shortId(member.user_id)}`;
+
+      return `
+        <article class="member-card">
+          <div class="member-top">
+            <div>
+              <div class="member-name">${escapeHtml(name)}</div>
+              <div class="member-meta">
+                ${escapeHtml(member.role || "member")} • ${activities.length} activity${activities.length === 1 ? "" : "s"}
+              </div>
+            </div>
+
+            <button class="btn-ghost" onclick="toggleMember('${escapeHtml(member.user_id)}')">
+              ${isExpanded ? "Hide activities" : "View activities"}
+            </button>
+          </div>
+
+          <div class="member-stats">
+            <div class="mini-stat">
+              <div class="mini-label">Activities</div>
+              <div class="mini-value">${Number(totals.ride_count || 0)}</div>
+            </div>
+
+            <div class="mini-stat">
+              <div class="mini-label">Distance</div>
+              <div class="mini-value">${formatNumber(totals.distance, 1)} ${escapeHtml(totals.distance_unit || "")}</div>
+            </div>
+
+            <div class="mini-stat">
+              <div class="mini-label">Average pace</div>
+              <div class="mini-value">${escapeHtml(formatPace(totals.avg_pace_seconds, totals.pace_unit))}</div>
+            </div>
+
+            <div class="mini-stat">
+              <div class="mini-label">Elevation</div>
+              <div class="mini-value">${formatNumber(totals.elevation, 0)} ${escapeHtml(totals.elevation_unit || "")}</div>
+            </div>
+
+            <div class="mini-stat">
+              <div class="mini-label">Duration</div>
+              <div class="mini-value">${formatDuration(totals.duration_seconds || 0)}</div>
+            </div>
+
+            <div class="mini-stat">
+              <div class="mini-label">Best benchmark</div>
+              <div class="mini-value">${formatNumber(totals.best_benchmark, 1)}%</div>
+            </div>
+          </div>
+
+          ${
+            isExpanded
+              ? `<div class="activities-list">
+                  ${activities.length ? memberYearsHTML(member) : `<div class="empty">No activities uploaded yet.</div>`}
+                </div>`
+              : ""
+          }
+        </article>
+      `;
+    }
+
+    function memberYearsHTML(member) {
+      const activities = member.activities || [];
+      const groups = {};
+
+      activities.forEach(activity => {
+        const year = yearKeyFromRide(activity);
+        if (!year) return;
+
+        if (!groups[year]) groups[year] = [];
+        groups[year].push(activity);
+      });
+
+      const years = Object.keys(groups).sort().reverse();
+
+      return years.map(year => {
+        const key = `${member.user_id}-${year}`;
+        const isExpanded = expandedMemberYears.has(key);
+        const yearRides = groups[year];
+
+        return `
+          <section class="year-group">
+            <button class="year-header" onclick="toggleMemberYear('${escapeHtml(key)}')">
+              <div>
+                <div class="year-title">${escapeHtml(year)}</div>
+                <div class="year-summary">${escapeHtml(summaryText(yearRides))}</div>
+              </div>
+
+              <div class="year-chevron">${isExpanded ? "−" : "+"}</div>
+            </button>
+
+            ${
+              isExpanded
+                ? `<div class="year-months">${memberMonthsHTML(member, yearRides)}</div>`
+                : ""
+            }
+          </section>
+        `;
+      }).join("");
+    }
+
+    function memberMonthsHTML(member, activities) {
+      const groups = {};
+
+      activities.forEach(activity => {
+        const month = monthKeyFromRide(activity);
+        if (!month) return;
+
+        if (!groups[month]) groups[month] = [];
+        groups[month].push(activity);
+      });
+
+      const months = Object.keys(groups).sort().reverse();
+
+      return months.map(month => {
+        const key = `${member.user_id}-${month}`;
+        const isExpanded = expandedMemberMonths.has(key);
+        const monthRides = groups[month];
+        const chartId = `chart-${safeDomId(member.user_id)}-${month.replace("-", "")}`;
+        const selectedDate = selectedMemberChartDates[key] || "";
+        const selectedMetric = selectedMemberChartMetrics[key] || "distance";
+
+        const visibleRides = selectedDate
+          ? monthRides.filter(activity => {
+              const rideDate = String(activity.activity_day || activity.activity_date || "").slice(0, 10);
+              return rideDate === selectedDate;
+            })
+          : monthRides;
+
+        return `
+          <section class="month-group" data-month-key="${escapeHtml(key)}">
+            <button class="month-header" onclick="toggleMemberMonth('${escapeHtml(key)}')">
+              <div>
+                <div class="month-title">${escapeHtml(formatMonthTitle(month))}</div>
+                <div class="month-summary">${escapeHtml(summaryText(monthRides))}</div>
+              </div>
+
+              <div class="month-chevron">${isExpanded ? "−" : "+"}</div>
+            </button>
+
+            ${
+              isExpanded
+                ? `
+                  <div class="member-month-detail">
+                    <div class="chart-card member-chart-card">
+                      <div class="chart-header">
+                        <div>
+                          <div class="chart-title">Monthly chart</div>
+                          <div class="chart-subtitle">Click a bar to show activities for that day.</div>
+                        </div>
+
+                        <select class="chart-control" onchange="setMemberChartMetric('${escapeHtml(key)}', '${escapeHtml(chartId)}', '${escapeHtml(member.user_id)}', '${escapeHtml(month)}', this.value)">
+                          <option value="distance" ${selectedMetric === "distance" ? "selected" : ""}>Distance</option>
+                          <option value="duration" ${selectedMetric === "duration" ? "selected" : ""}>Time</option>
+                          <option value="benchmark" ${selectedMetric === "benchmark" ? "selected" : ""}>Benchmark</option>
+                          <option value="pace" ${selectedMetric === "pace" ? "selected" : ""}>Average pace</option>
+                          <option value="elevation" ${selectedMetric === "elevation" ? "selected" : ""}>Elevation</option>
+                          <option value="calories" ${selectedMetric === "calories" ? "selected" : ""}>Calories</option>
+                        </select>
+                      </div>
+
+                      <div class="chart-wrap">
+                        <canvas id="${escapeHtml(chartId)}"></canvas>
+                      </div>
+                    </div>
+
+                    ${
+                      selectedDate
+                        ? `<div class="selected-date-toolbar">
+                            <span>Showing activities for ${escapeHtml(formatDate(selectedDate))}</span>
+                            <button class="btn-ghost" onclick="clearMemberChartDate('${escapeHtml(key)}')">Show all activities</button>
+                          </div>`
+                        : ""
+                    }
+
+                    ${visibleRides.length ? visibleRides.map(activity => rideCardHTML(activity, Boolean(selectedDate), key)).join("") : `<div class="empty">No activities found.</div>`
+                    }
+                  </div>
+                `
+                : ""
+            }
+          </section>
+        `;
+      }).join("");
+    }
+
+    function rideCardHTML(activity, isSelected = false, selectedKey = "") {
+      const date = formatDate(activity.activity_day || activity.activity_date);
+      const benchmark = safeNumber(activity.activity_score);
+      const distance = safeNumber(activity.distance_value);
+      const avgPace = safeNumber(activity.average_pace_seconds);
+      const elevation = safeNumber(activity.elevation_gain_value);
+      const calories = activity.calories ?? 0;
+      const duration = formatDuration(activity.duration_seconds || 0);
+
+      return `
+        <article class="activity-card ${isSelected ? "selected-activity" : ""}" ${isSelected ? `data-selected-key="${escapeHtml(selectedKey)}"` : ""}>
+          <div>
+            <div class="activity-date">${escapeHtml(date)}</div>
+            <div class="activity-small">${escapeHtml(activityTypeLabel(activity.activity_type))} · ID: ${escapeHtml(shortId(activity.local_activity_id || activity.id))}</div>
+          </div>
+
+          <div>
+            <div class="metric-label">Activity Score</div>
+            <div class="metric-value green">${formatNumber(benchmark, 1)}%</div>
+          </div>
+
+          <div>
+            <div class="metric-label">Distance</div>
+            <div class="metric-value">${formatNumber(distance, 2)} ${escapeHtml(activity.distance_unit || "")}</div>
+          </div>
+
+          <div>
+            <div class="metric-label">Average pace</div>
+            <div class="metric-value">${escapeHtml(formatPace(avgPace, activity.pace_unit))}</div>
+          </div>
+
+          <div>
+            <div class="metric-label">Elevation</div>
+            <div class="metric-value">${formatNumber(elevation, 0)} ${escapeHtml(activity.elevation_unit || "")}</div>
+          </div>
+
+          <div>
+            <div class="metric-label">Calories</div>
+            <div class="metric-value">${escapeHtml(String(calories))} kcal</div>
+            <div class="activity-small">${escapeHtml(duration)}</div>
+          </div>
+        </article>
+      `;
+    }
+
+    function toggleMember(userId) {
+      if (expandedMembers.has(userId)) {
+        expandedMembers.delete(userId);
+      } else {
+        expandedMembers.add(userId);
+      }
+
+      renderMembers();
+      renderOpenMemberCharts();
+    }
+
+    function toggleMemberYear(key) {
+      if (expandedMemberYears.has(key)) {
+        expandedMemberYears.delete(key);
+      } else {
+        expandedMemberYears.add(key);
+      }
+
+      renderMembers();
+      renderOpenMemberCharts();
+    }
+
+    function toggleMemberMonth(key) {
+      if (expandedMemberMonths.has(key)) {
+        expandedMemberMonths.delete(key);
+      } else {
+        expandedMemberMonths.add(key);
+      }
+
+      renderMembers();
+      renderOpenMemberCharts();
+    }
+
+   function setMemberChartMetric(key, chartId, userId, monthKey, metric) {
+  selectedMemberChartMetrics[key] = metric;
+
+  // Changing metric should return to the full month view
+  delete selectedMemberChartDates[key];
+
+  renderMembers();
+
+  setTimeout(() => {
+    renderOpenMemberCharts();
+
+    const monthSection = document.querySelector(`[data-month-key="${cssEscapeValue(key)}"]`);
+    if (monthSection) {
+      monthSection.scrollIntoView({
+        behavior: "smooth",
+        block: "start"
+      });
+    }
+  }, 100);
+}
+
+    function clearMemberChartDate(key) {
+      delete selectedMemberChartDates[key];
+
+      renderMembers();
+
+      setTimeout(() => {
+        renderOpenMemberCharts();
+      }, 100);
+    }
+
+    function renderOpenMemberCharts() {
+      setTimeout(() => {
+        const members = currentData?.members || [];
+
+        members.forEach(member => {
+          const activities = member.activities || [];
+
+          const months = Array.from(new Set(
+            activities.map(activity => monthKeyFromRide(activity)).filter(Boolean)
+          ));
+
+          months.forEach(month => {
+            const key = `${member.user_id}-${month}`;
+
+            if (expandedMemberMonths.has(key)) {
+              const chartId = `chart-${safeDomId(member.user_id)}-${month.replace("-", "")}`;
+              const metric = selectedMemberChartMetrics[key] || "distance";
+              renderMemberChart(chartId, member.user_id, month, metric);
+            }
+          });
+        });
+      }, 100);
+    }
+
+    function renderMemberChart(chartId, userId, monthKey, metric) {
+      const canvas = document.getElementById(chartId);
+      if (!canvas || !currentData) return;
+
+      const member = (currentData.members || []).find(m => m.user_id === userId);
+      if (!member) return;
+
+      const activities = (member.activities || []).filter(activity => {
+        return monthKeyFromRide(activity) === monthKey;
+      });
+
+      const chartData = buildDailyChartData(activities, metric);
+      const metricInfo = chartMetricInfo(metric, activities);
+      const colors = chartMetricColors(metric);
+      const monthSelectionKey = `${userId}-${monthKey}`;
+
+      selectedMemberChartMetrics[monthSelectionKey] = metric;
+
+      if (memberCharts[chartId]) {
+        memberCharts[chartId].destroy();
+      }
+
+      memberCharts[chartId] = new Chart(canvas, {
+        type: "bar",
+        data: {
+          labels: chartData.labels,
+          datasets: [{
+            label: metricInfo.label,
+            data: chartData.values,
+            borderWidth: 0,
+            borderRadius: 6,
+            backgroundColor: colors.background,
+            hoverBackgroundColor: colors.hover
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          onClick: (_event, elements) => {
+            if (!elements.length) return;
+
+            const index = elements[0].index;
+            const key = chartData.keys[index];
+
+            if (!key) return;
+
+            selectedMemberChartDates[monthSelectionKey] = key;
+
+            renderMembers();
+
+            setTimeout(() => {
+  renderOpenMemberCharts();
+
+  const selectedRide = document.querySelector(
+    `[data-selected-key="${cssEscapeValue(monthSelectionKey)}"]`
+  );
+
+  if (selectedRide) {
+    selectedRide.scrollIntoView({
+      behavior: "smooth",
+      block: "center"
+    });
+  }
+}, 100);
+          },
+          plugins: {
+            legend: {
+              labels: {
+                color: "#9ca3af",
+                font: {
+                  size: 13,
+                  weight: "600"
+                },
+                boxWidth: 10,
+                boxHeight: 10
+              }
+            },
+            tooltip: {
+              backgroundColor: "rgba(13,22,16,0.92)",
+              titleColor: "#f0fdf4",
+              bodyColor: "#9ca3af",
+              borderColor: colors.background,
+              borderWidth: 1,
+              padding: 12,
+              cornerRadius: 10,
+              callbacks: {
+                label: ctx => `${metricInfo.label}: ${formatNumber(ctx.raw, metricInfo.decimals)} ${metricInfo.unit}`
+              }
+            }
+          },
+          scales: {
+            x: {
+              ticks: {
+                color: "#8a958f",
+                font: {
+                  size: 12
+                }
+              },
+              grid: {
+                color: "rgba(255,255,255,0.05)",
+                drawBorder: false
+              }
+            },
+            y: {
+              beginAtZero: true,
+              ticks: {
+                color: "#8a958f",
+                font: {
+                  size: 12
+                },
+                callback: v => `${v}${metricInfo.shortUnit}`
+              },
+              grid: {
+                color: "rgba(255,255,255,0.05)",
+                drawBorder: false
+              }
+            }
+          }
+        }
+      });
+    }
+
+    function buildDailyChartData(activities, metric) {
+      const groups = {};
+
+      activities.forEach(activity => {
+        const key = String(activity.activity_day || activity.activity_date || "").slice(0, 10);
+        if (!key) return;
+
+        if (!groups[key]) groups[key] = [];
+        groups[key].push(activity);
+      });
+
+      const keys = Object.keys(groups).sort();
+
+      return {
+        keys,
+        labels: keys.map(formatChartDay),
+        values: keys.map(k => chartGroupValue(groups[k], metric))
+      };
+    }
+
+    function chartGroupValue(activities, metric) {
+      if (!activities.length) return 0;
+
+      if (metric === "distance") return sum(activities, "distance_value");
+      if (metric === "duration") return activities.reduce((t, r) => t + (Number(r.duration_seconds) || 0), 0) / 3600;
+      if (metric === "benchmark") return average(activities, "activity_score");
+      if (metric === "pace") return average(activities, "average_pace_seconds");
+      if (metric === "elevation") return sum(activities, "elevation_gain_value");
+      if (metric === "calories") return activities.reduce((t, r) => t + (Number(r.calories) || 0), 0);
+
+      return 0;
+    }
+
+    function chartMetricInfo(metric, activities) {
+      const f = activities[0] || {};
+
+      if (metric === "distance") {
+        return {
+          label: "Distance",
+          unit: f.distance_unit || "",
+          shortUnit: f.distance_unit ? ` ${f.distance_unit}` : "",
+          decimals: 1
+        };
+      }
+
+      if (metric === "duration") {
+        return {
+          label: "Time",
+          unit: "hours",
+          shortUnit: "h",
+          decimals: 1
+        };
+      }
+
+      if (metric === "benchmark") {
+        return {
+          label: "Benchmark",
+          unit: "%",
+          shortUnit: "%",
+          decimals: 1
+        };
+      }
+
+      if (metric === "pace") {
+        return {
+          label: "Average pace",
+          unit: f.pace_unit || "min/km",
+          shortUnit: "",
+          decimals: 0
+        };
+      }
+
+      if (metric === "elevation") {
+        return {
+          label: "Elevation",
+          unit: f.elevation_unit || "",
+          shortUnit: f.elevation_unit ? ` ${f.elevation_unit}` : "",
+          decimals: 0
+        };
+      }
+
+      if (metric === "calories") {
+        return {
+          label: "Calories",
+          unit: "kcal",
+          shortUnit: " kcal",
+          decimals: 0
+        };
+      }
+
+      return {
+        label: "Value",
+        unit: "",
+        shortUnit: "",
+        decimals: 1
+      };
+    }
+
+    function chartMetricColors(metric) {
+      if (metric === "distance") {
+        return {
+          background: "rgba(59,130,246,0.62)",
+          hover: "rgba(96,165,250,0.86)"
+        };
+      }
+
+      if (metric === "benchmark") {
+        return {
+          background: "rgba(34,197,94,0.62)",
+          hover: "rgba(74,222,128,0.86)"
+        };
+      }
+
+      if (metric === "calories") {
+        return {
+          background: "rgba(249,115,22,0.62)",
+          hover: "rgba(251,146,60,0.86)"
+        };
+      }
+
+      if (metric === "pace") {
+        return {
+          background: "rgba(239,68,68,0.62)",
+          hover: "rgba(248,113,113,0.86)"
+        };
+      }
+
+      if (metric === "duration") {
+        return {
+          background: "rgba(21,128,61,0.68)",
+          hover: "rgba(34,197,94,0.88)"
+        };
+      }
+
+      if (metric === "elevation") {
+        return {
+          background: "rgba(146,64,14,0.68)",
+          hover: "rgba(180,83,9,0.88)"
+        };
+      }
+
+      return {
+        background: "rgba(34,197,94,0.55)",
+        hover: "rgba(74,222,128,0.75)"
+      };
+    }
+
+    function destroyMemberCharts() {
+      Object.values(memberCharts).forEach(chart => {
+        if (chart) chart.destroy();
+      });
+
+      memberCharts = {};
+    }
+
+    function renderError(message) {
+      document.getElementById("clubTitle").textContent = "Could not load club";
+      document.getElementById("clubDescription").textContent = message || "Unknown error.";
+
+      document.getElementById("membersList").innerHTML =
+        `<div class="empty">${escapeHtml(message || "Could not load club.")}</div>`;
+    }
+
+    function showClub() {
+      loginSection.classList.add("hidden");
+      clubSection.classList.remove("hidden");
+      signedInActions.classList.remove("hidden");
+      showLoginStatus("");
+    }
+
+    function showLogin() {
+      loginSection.classList.remove("hidden");
+      clubSection.classList.add("hidden");
+      signedInActions.classList.add("hidden");
+      userDisplayName.textContent = "";
+      showLoginStatus("");
+    }
+
+    function goBack() {
+      window.location.href = "index.html";
+    }
+
+    function setLoginLoading(loading) {
+      const btn = document.getElementById("loginButton");
+      btn.disabled = loading;
+      btn.textContent = loading ? "Signing in…" : "Sign in";
+    }
+
+    function showLoginStatus(msg) {
+      loginStatus.textContent = msg || "";
+    }
+
+    function groupTypeLabel(type) {
+      if (type === "club") return "Club";
+      if (type === "family") return "Family";
+      if (type === "challenge") return "Activity Challenge";
+      return "Group";
+    }
+
+    function average(rows, key) {
+      if (!rows.length) return 0;
+      return rows.reduce((s, r) => s + (Number(r[key]) || 0), 0) / rows.length;
+    }
+
+    function sum(rows, key) {
+      return rows.reduce((t, r) => t + (Number(r[key]) || 0), 0);
+    }
+
+    function safeNumber(v) {
+      const n = Number(v);
+      return Number.isFinite(n) ? n : 0;
+    }
+
+    function formatNumber(v, d) {
+      return safeNumber(v).toLocaleString(undefined, {
+        minimumFractionDigits: d,
+        maximumFractionDigits: d
+      });
+    }
+
+    function formatDuration(totalSeconds) {
+      totalSeconds = Math.max(0, Number(totalSeconds) || 0);
+
+      const hours = Math.floor(totalSeconds / 3600);
+      const minutes = Math.floor((totalSeconds % 3600) / 60);
+      const seconds = Math.floor(totalSeconds % 60);
+
+      if (hours > 0) return `${hours}h ${String(minutes).padStart(2, "0")}m`;
+      return `${minutes}m ${String(seconds).padStart(2, "0")}s`;
+    }
+
+    function formatDate(value) {
+      if (!value) return "Unknown date";
+
+      const raw = String(value);
+      const datePart = raw.slice(0, 10);
+      const match = datePart.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+
+      if (match) {
+        const year = Number(match[1]);
+        const month = Number(match[2]) - 1;
+        const day = Number(match[3]);
+
+        const localDate = new Date(year, month, day);
+
+        return localDate.toLocaleDateString(undefined, {
+          year: "numeric",
+          month: "short",
+          day: "numeric"
+        });
+      }
+
+      const date = new Date(value);
+
+      if (Number.isNaN(date.getTime())) return value;
+
+      return date.toLocaleDateString(undefined, {
+        year: "numeric",
+        month: "short",
+        day: "numeric"
+      });
+    }
+
+    function formatChartDay(value) {
+      const localDate = localDateFromYMD(value);
+
+      if (localDate) {
+        return localDate.toLocaleDateString(undefined, {
+          month: "short",
+          day: "numeric"
+        });
+      }
+
+      const date = new Date(value);
+
+      if (Number.isNaN(date.getTime())) return value;
+
+      return date.toLocaleDateString(undefined, {
+        month: "short",
+        day: "numeric"
+      });
+    }
+
+    function formatMonthTitle(monthKey) {
+      const localDate = localDateFromYMD(`${monthKey}-01`);
+
+      if (localDate) {
+        return localDate.toLocaleDateString(undefined, {
+          month: "long",
+          year: "numeric"
+        });
+      }
+
+      return monthKey;
+    }
+
+    function localDateFromYMD(value) {
+      if (!value) return null;
+
+      const raw = String(value);
+      const datePart = raw.slice(0, 10);
+      const match = datePart.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+
+      if (!match) return null;
+
+      const year = Number(match[1]);
+      const month = Number(match[2]) - 1;
+      const day = Number(match[3]);
+
+      return new Date(year, month, day);
+    }
+
+    function summaryText(activities) {
+      const rideCount = activities.length;
+      const distance = sum(activities, "distance_value");
+      const calories = activities.reduce((t, r) => t + (Number(r.calories) || 0), 0);
+      const durationSeconds = activities.reduce((t, r) => t + (Number(r.duration_seconds) || 0), 0);
+      const distanceUnit = activities[0]?.distance_unit || "";
+
+      return `${rideCount} activity${rideCount === 1 ? "" : "s"} • ${formatNumber(distance, 1)} ${distanceUnit} • ${Math.round(calories)} kcal • ${formatDuration(durationSeconds)}`;
+    }
+
+    function yearKeyFromRide(activity) {
+      return String(activity.activity_day || activity.activity_date || "").slice(0, 4);
+    }
+
+    function monthKeyFromRide(activity) {
+      return String(activity.activity_day || activity.activity_date || "").slice(0, 7);
+    }
+
+    function formatPace(seconds, unit = "min/km") {
+      const value = Number(seconds);
+      if (!Number.isFinite(value) || value <= 0) return "—";
+      const rounded = Math.round(value);
+      const minutes = Math.floor(rounded / 60);
+      const remainingSeconds = String(rounded % 60).padStart(2, "0");
+      return `${minutes}:${remainingSeconds} ${unit || "min/km"}`;
+    }
+
+    function activityTypeLabel(type) {
+      return String(type || "run").toLowerCase() === "walk" ? "Walk" : "Run";
+    }
+
+    function shortId(id) {
+      if (!id) return "—";
+      return String(id).slice(0, 6);
+    }
+
+    function safeDomId(value) {
+      return String(value || "")
+        .replaceAll("-", "")
+        .replaceAll("_", "")
+        .replace(/[^a-zA-Z0-9]/g, "");
+    }
+    
+   function cssEscapeValue(value) {
+  if (window.CSS && typeof window.CSS.escape === "function") {
+    return CSS.escape(String(value));
+  }
+
+  return String(value).replace(/["\\]/g, "\\$&");
+}
+
+    function escapeHtml(value) {
+      return String(value ?? "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    checkSession();
+
+    client.auth.onAuthStateChange((_event, session) => {
+      if (session && session.user) {
+        currentUser = session.user;
+
+        showClub();
+        loadProfile(session.user).then(() => {
+          loadClubDashboard();
+        });
+      } else {
+        currentUser = null;
+        currentData = null;
+        expandedMembers.clear();
+        expandedMemberYears.clear();
+        expandedMemberMonths.clear();
+        selectedMemberChartDates = {};
+        selectedMemberChartMetrics = {};
+        destroyMemberCharts();
+        showLogin();
+      }
+    });
+  </script>
+</body>
+</html>

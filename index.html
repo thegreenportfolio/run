@@ -1,0 +1,2527 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <title>Run Green Portal</title>
+  <meta name="description" content="Run Green private portal for uploaded activity summaries, groups, family, training partners, and running and walking clubs." />
+  <meta name="application-name" content="Run Green Portal">
+
+  <!-- Safari / Favorites / App Icons -->
+  <link rel="icon" type="image/png" href="./assets/icon.png">
+  <link rel="apple-touch-icon" href="./assets/icon.png">
+  <meta name="theme-color" content="#16a34a">
+
+  <!-- App Store Smart Banner -->
+  <meta name="apple-itunes-app" content="app-id=6753626587" />
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --green:        #22c55e;
+      --green-light:  #16a34a;
+      --green-dim:    #16a34a;
+      --green-glow:   rgba(34,197,94,0.18);
+      --bg:           #eef8f1;
+      --surface:      #f8fff9;
+      --card:         #ffffff;
+      --card-hover:   #f0fff3;
+      --border:       #dfe7e2;
+      --border-soft:  #e5e5ea;
+      --text:         #111111;
+      --text-2:       #16a34a;
+      --muted:        #6e6e73;
+      --muted-2:      #6e6e73;
+      --danger:       #ef4444;
+      --blue:         #007aff;
+      --page-gradient:
+        radial-gradient(circle at top left, #dcfce7 0, transparent 38%),
+        linear-gradient(180deg, #e8fbea 0%, #f5fff7 45%, #e8fbea 100%);
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --green:        #44d965;
+        --green-light:  #4ade80;
+        --green-dim:    #16a34a;
+        --green-glow:   rgba(34,197,94,0.18);
+        --bg:           #03130a;
+        --surface:      #102f1d;
+        --card:         #112918;
+        --card-hover:   #173821;
+        --border:       rgba(34,197,94,0.14);
+        --border-soft:  rgba(255,255,255,0.07);
+        --text:         #f0fdf4;
+        --text-2:       #86efac;
+        --muted:        #8a958f;
+        --muted-2:      #9ca3af;
+        --danger:       #ef4444;
+        --blue:         #38bdf8;
+        --page-gradient:
+          radial-gradient(circle at top left, rgba(74,222,128,0.18), transparent 34%),
+          radial-gradient(circle at bottom right, rgba(34,197,94,0.16), transparent 42%),
+          linear-gradient(180deg, #0a2414 0%, #10351f 48%, #092817 100%);
+      }
+    }
+
+    *, *::before, *::after {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--page-gradient);
+      color: var(--text);
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background:
+        radial-gradient(ellipse 70% 45% at 15% -10%, rgba(74,222,128,0.14) 0%, transparent 65%),
+        radial-gradient(ellipse 55% 35% at 85% 105%, rgba(22,163,74,0.12) 0%, transparent 62%),
+        linear-gradient(135deg, rgba(34,197,94,0.04), transparent 45%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      border-bottom: 1px solid var(--border);
+      background: rgba(255,255,255,0.72);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+    }
+
+    @media (prefers-color-scheme: dark) {
+      header {
+        background: rgba(8,31,17,0.84);
+      }
+    }
+
+    .header-inner {
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 0 24px;
+      height: 68px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .logo {
+      width: 42px;
+      height: 42px;
+      border-radius: 12px;
+      overflow: hidden;
+      flex-shrink: 0;
+      border: 1px solid var(--border);
+      background: var(--surface);
+    }
+
+    .logo img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .brand-text h1 {
+      font-size: 17px;
+      font-weight: 700;
+      margin: 0;
+      letter-spacing: -0.3px;
+      color: var(--text);
+    }
+
+    .brand-text .subtitle {
+      font-size: 12px;
+      color: var(--muted);
+      margin: 2px 0 0;
+      letter-spacing: 0.01em;
+    }
+
+    .top-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .user-pill {
+      font-size: 13px;
+      color: var(--green-light);
+      background: rgba(34,197,94,0.08);
+      border: 1px solid rgba(34,197,94,0.22);
+      border-radius: 999px;
+      padding: 7px 14px;
+      max-width: 220px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    main {
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 36px 24px 80px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    button {
+      border: 0;
+      cursor: pointer;
+      font-family: inherit;
+      font-weight: 600;
+      font-size: 14px;
+      border-radius: 999px;
+      padding: 9px 18px;
+      transition: all 0.15s ease;
+      color: #fff;
+      white-space: nowrap;
+    }
+
+    button:hover {
+      transform: translateY(-1px);
+    }
+
+    button:active {
+      transform: translateY(0);
+    }
+
+    button:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .btn-primary {
+      background: var(--green-dim);
+      box-shadow: 0 0 0 1px rgba(34,197,94,0.4), 0 4px 16px rgba(34,197,94,0.18);
+    }
+
+    .btn-primary:hover {
+      background: var(--green);
+      box-shadow: 0 0 0 1px rgba(34,197,94,0.6), 0 6px 24px rgba(34,197,94,0.28);
+    }
+
+    .btn-ghost {
+      background: transparent;
+      color: var(--muted-2);
+      border: 1px solid var(--border-soft);
+    }
+
+    .btn-ghost:hover {
+      background: var(--surface);
+      color: var(--text);
+    }
+
+    .btn-danger-soft {
+      background: rgba(239,68,68,0.1);
+      color: #fca5a5;
+      border: 1px solid rgba(239,68,68,0.25);
+    }
+
+    .btn-danger-soft:hover {
+      background: rgba(239,68,68,0.18);
+    }
+
+    .card,
+    .login-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      padding: 28px;
+      box-shadow: 0 18px 60px rgba(0,0,0,0.10);
+    }
+
+    .login-card {
+      width: 100%;
+      max-width: 440px;
+      padding: 40px;
+    }
+
+    .settings-panel {
+      margin-bottom: 20px;
+      background: var(--surface);
+      border: 1px solid var(--border-soft);
+      border-radius: 18px;
+      padding: 22px;
+    }
+
+    .settings-panel h3 {
+      margin: 0 0 6px;
+      font-size: 18px;
+    }
+
+    .settings-panel p {
+      margin: 0 0 18px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .settings-actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 12px;
+    }
+    
+
+    .login-wrap {
+      min-height: calc(100vh - 120px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .login-card {
+      width: 100%;
+      max-width: 440px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      padding: 40px;
+      box-shadow: 0 18px 60px rgba(0,0,0,0.10);
+    }
+
+    @media (prefers-color-scheme: dark) {
+      .login-card {
+        box-shadow: 0 18px 60px rgba(0,0,0,0.22);
+      }
+    }
+
+    .login-eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--green-light);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-bottom: 14px;
+    }
+
+    .login-eyebrow::before {
+      content: '';
+      display: inline-block;
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--green);
+      box-shadow: 0 0 8px var(--green);
+    }
+
+    .login-card h2 {
+      font-size: 26px;
+      font-weight: 800;
+      margin: 0 0 8px;
+      letter-spacing: -0.5px;
+    }
+
+    .helper {
+      color: var(--muted-2);
+      font-size: 14px;
+      line-height: 1.6;
+      margin: 0 0 28px;
+    }
+
+    .field {
+      margin-bottom: 16px;
+    }
+
+    label {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      color: var(--muted-2);
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+
+    input, select {
+      width: 100%;
+      padding: 13px 16px;
+      border-radius: 12px;
+      border: 1px solid var(--border-soft);
+      background: var(--surface);
+      color: var(--text);
+      font-size: 15px;
+      font-family: inherit;
+      outline: none;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+
+    input::placeholder {
+      color: var(--muted);
+    }
+
+    input:focus, select:focus {
+      border-color: rgba(34,197,94,0.5);
+      box-shadow: 0 0 0 3px rgba(34,197,94,0.1);
+    }
+
+    select option {
+      background: var(--card);
+      color: var(--text);
+    }
+
+    .button-row {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 6px;
+    }
+
+    .status {
+      margin-top: 14px;
+      font-size: 14px;
+      color: #fca5a5;
+      min-height: 20px;
+    }
+
+    .status.success {
+      color: var(--green-light);
+    }
+
+    .dash-header {
+      margin-bottom: 28px;
+    }
+
+    .dash-header h2 {
+      font-size: 28px;
+      font-weight: 800;
+      margin: 0 0 6px;
+      letter-spacing: -0.6px;
+    }
+
+    .dash-helper {
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .stat-grid {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 12px;
+      margin: 24px 0;
+    }
+
+    .stat {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 18px 16px;
+      transition: background 0.2s;
+    }
+
+    .stat:hover {
+      background: var(--card-hover);
+    }
+
+    .stat-label {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 10px;
+    }
+
+    .stat-value {
+      font-size: 22px;
+      font-weight: 800;
+      color: var(--text);
+      letter-spacing: -0.5px;
+      line-height: 1.1;
+    }
+
+    .stat-value.accent {
+      color: var(--green-light);
+    }
+
+    .controls {
+      display: grid;
+      grid-template-columns: 1fr 160px 160px;
+      gap: 10px;
+      margin: 20px 0;
+    }
+
+    .search-wrap {
+      position: relative;
+    }
+
+    .search-wrap input {
+      padding-left: 42px;
+    }
+
+    .search-icon {
+      position: absolute;
+      left: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--muted);
+      font-size: 16px;
+      pointer-events: none;
+    }
+
+    .chart-card {
+      background: var(--surface);
+      border: 1px solid var(--border-soft);
+      border-radius: 18px;
+      padding: 22px;
+      margin: 20px 0;
+    }
+
+    .chart-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 12px;
+      margin-bottom: 18px;
+    }
+
+    .chart-title {
+      font-size: 16px;
+      font-weight: 700;
+      margin: 0 0 4px;
+    }
+
+    .chart-subtitle {
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .chart-control {
+      width: 200px;
+      font-size: 13px;
+    }
+
+    .chart-wrap {
+      height: 300px;
+      position: relative;
+    }
+
+    .activities-list {
+      display: grid;
+      gap: 10px;
+    }
+
+    .activity-card {
+      background: var(--surface);
+      border: 1px solid var(--border-soft);
+      border-radius: 16px;
+      padding: 18px 20px;
+      display: grid;
+      grid-template-columns: 1.3fr repeat(5, 1fr);
+      gap: 16px;
+      align-items: center;
+      transition: background 0.15s, border-color 0.15s;
+      cursor: default;
+    }
+
+    .activity-card:hover {
+      background: var(--card-hover);
+      border-color: rgba(34,197,94,0.2);
+    }
+    
+    .activity-card.selected-activity {
+  border-color: rgba(74,222,128,0.75);
+  background: rgba(34,197,94,0.12);
+  box-shadow: 0 0 0 1px rgba(74,222,128,0.22);
+}
+
+.selected-date-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid rgba(74,222,128,0.28);
+  border-radius: 14px;
+  background: var(--surface);
+  color: var(--green-light);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+    .year-group {
+      border: 1px solid rgba(34,197,94,0.16);
+      border-radius: 20px;
+      background: var(--surface);
+      overflow: hidden;
+    }
+
+    .year-header {
+      width: 100%;
+      border-radius: 0;
+      padding: 20px;
+      background: var(--surface);
+      color: var(--text);
+      border: 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      text-align: left;
+    }
+
+    .year-header:hover {
+      background: rgba(34,197,94,0.10);
+    }
+
+    .year-title {
+      font-size: 19px;
+      font-weight: 900;
+    }
+
+    .year-summary {
+      color: var(--muted);
+      font-size: 13px;
+      margin-top: 4px;
+    }
+
+    .year-chevron {
+      color: var(--green-light);
+      font-size: 20px;
+      font-weight: 900;
+    }
+
+    .year-months {
+      display: grid;
+      gap: 10px;
+      padding: 12px;
+    }
+
+    .month-group {
+      border: 1px solid var(--border-soft);
+      border-radius: 18px;
+      background: var(--surface);
+      overflow: hidden;
+    }
+
+    .month-header {
+      width: 100%;
+      border-radius: 0;
+      padding: 18px 20px;
+      background: var(--surface);
+      color: var(--text);
+      border: 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      text-align: left;
+    }
+
+    .month-header:hover {
+      background: rgba(34,197,94,0.08);
+    }
+
+    .month-title {
+      font-size: 17px;
+      font-weight: 800;
+    }
+
+    .month-summary {
+      color: var(--muted);
+      font-size: 13px;
+      margin-top: 4px;
+    }
+
+    .month-chevron {
+      color: var(--green-light);
+      font-size: 18px;
+      font-weight: 800;
+    }
+
+    .month-activities {
+      display: grid;
+      gap: 10px;
+      padding: 12px;
+    }
+
+    .month-activities .activity-card {
+      margin: 0;
+    }
+
+    .activity-date {
+      font-weight: 700;
+      font-size: 15px;
+      letter-spacing: -0.2px;
+    }
+
+    .activity-small {
+      color: var(--muted);
+      font-size: 12px;
+      margin-top: 4px;
+    }
+
+    .metric-label {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 5px;
+    }
+
+    .metric-value {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .metric-value.green {
+      color: var(--green-light);
+    }
+
+    .section-divider {
+      border: 0;
+      border-top: 1px solid var(--border-soft);
+      margin: 28px 0 24px;
+    }
+
+    .empty {
+      text-align: center;
+      color: var(--muted);
+      padding: 52px 20px;
+      background: var(--surface);
+      border: 1px dashed var(--border-soft);
+      border-radius: 16px;
+      font-size: 15px;
+    }
+
+    .groups-list {
+      display: grid;
+      gap: 12px;
+      margin: 16px 0 24px;
+    }
+
+    .group-card {
+      background: var(--surface);
+      border: 1px solid var(--border-soft);
+      border-radius: 16px;
+      padding: 18px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .group-card:hover {
+      background: var(--card-hover);
+      border-color: rgba(34,197,94,0.2);
+    }
+
+    .group-title {
+      font-size: 16px;
+      font-weight: 800;
+      margin-bottom: 4px;
+    }
+
+    .group-meta {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .group-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .group-member-count {
+  color: var(--green-light);
+  font-size: 13px;
+  font-weight: 700;
+  margin-top: 6px;
+}
+
+.group-members {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border-soft);
+  display: grid;
+  gap: 8px;
+}
+
+.group-member {
+  color: var(--muted-2);
+  font-size: 13px;
+}
+
+.group-member strong {
+  color: var(--text);
+}
+.group-member-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 6px 0;
+  border-top: 1px solid var(--border-soft);
+}
+
+.group-member-row:first-child {
+  border-top: 0;
+}
+
+.group-member-name {
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.group-member-role {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.btn-small-soft-danger {
+  padding: 6px 11px;
+  font-size: 12px;
+  border-radius: 999px;
+  background: rgba(239,68,68,0.08);
+  color: #fca5a5;
+  border: 1px solid rgba(239,68,68,0.18);
+}
+
+.btn-small-soft-danger:hover {
+  background: rgba(239,68,68,0.14);
+  color: #fecaca;
+}
+
+.group-danger-zone {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(239,68,68,0.12);
+  display: flex;
+  justify-content: flex-start;
+}
+
+    
+
+    .footer-note {
+      margin-top: 32px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.6;
+      padding-top: 20px;
+      border-top: 1px solid var(--border-soft);
+    }
+
+    .footer-note a {
+      color: var(--green-light);
+      font-weight: 700;
+      text-decoration: none;
+    }
+
+    .footer-note a:hover {
+      text-decoration: underline;
+    }
+.form-row.two-cols {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+@media (max-width: 700px) {
+  .form-row.two-cols {
+    grid-template-columns: 1fr;
+  }
+}
+    @media (max-width: 900px) {
+      .stat-grid {
+        grid-template-columns: repeat(3, 1fr);
+      }
+
+      .controls {
+        grid-template-columns: 1fr;
+      }
+
+      .activity-card {
+        grid-template-columns: 1fr 1fr;
+      }
+
+      .header-inner {
+        flex-wrap: wrap;
+        height: auto;
+        padding: 14px 20px;
+      }
+
+      .top-actions {
+        width: 100%;
+      }
+
+      .group-card {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+    }
+
+    @media (max-width: 700px) {
+      .chart-header {
+        flex-direction: column;
+      }
+
+      .chart-control {
+        width: 100%;
+      }
+
+      .chart-wrap {
+        height: 260px;
+      }
+
+      .stat-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    @media (max-width: 520px) {
+      main {
+        padding: 20px 16px 60px;
+      }
+
+      .card {
+        padding: 20px;
+        border-radius: 18px;
+      }
+
+      .login-card {
+        padding: 28px 22px;
+      }
+
+      .stat-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .activity-card {
+        grid-template-columns: 1fr;
+      }
+
+      .button-row button,
+      .top-actions button,
+      .group-actions button {
+        width: 100%;
+      }
+
+      .user-pill {
+        max-width: 100%;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <header>
+    <div class="header-inner">
+      <div class="brand">
+        <div class="logo">
+          <img src="./assets/icon.png" alt="Run Green icon">
+        </div>
+
+        <div class="brand-text">
+          <h1>Run Green</h1>
+          <div class="subtitle">Private activity portal</div>
+        </div>
+      </div>
+
+      <div id="signedInActions" class="top-actions hidden">
+        <div id="userDisplayName" class="user-pill"></div>
+        <button class="btn-ghost" onclick="toggleSettings()">Settings</button>
+        <button class="btn-ghost" onclick="refreshDashboard()">Refresh</button>
+        <button class="btn-danger-soft" onclick="signOut()">Sign out</button>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section id="loginSection" class="login-wrap">
+      <div class="login-card">
+        <div class="login-eyebrow">Secure access</div>
+        <h2>Sign in to your portal</h2>
+        <p class="helper">Use the same email and password from the Run Green app.</p>
+
+        <div class="field">
+          <label for="email">Email</label>
+          <input id="email" type="email" autocomplete="email" placeholder="you@example.com" />
+        </div>
+
+        <div class="field">
+          <label for="password">Password</label>
+          <input id="password" type="password" autocomplete="current-password" placeholder="••••••••" />
+        </div>
+
+        <div class="button-row">
+          <button id="loginButton" class="btn-primary" onclick="signIn()">Sign in</button>
+          <button class="btn-ghost" onclick="checkSession()">Check session</button>
+        </div>
+
+        <div id="loginStatus" class="status"></div>
+      </div>
+    </section>
+
+    <section id="dashboardSection" class="hidden">
+      <div class="card">
+
+        <div id="settingsPanel" class="settings-panel hidden">
+          <h3>Profile settings</h3>
+          <p>Choose the name shown in your dashboard and future private groups.</p>
+
+          <div class="field">
+            <label for="displayNameInput">Display name</label>
+           <input id="displayNameInput" type="text" maxlength="40" placeholder="Name or nickname" />
+          </div>
+
+          <div class="settings-actions">
+            <button class="btn-primary" onclick="saveDisplayName()">Save display name</button>
+            <button class="btn-ghost" onclick="toggleSettings()">Close</button>
+          </div>
+
+          <div id="settingsStatus" class="status"></div>
+
+          <hr class="section-divider" />
+
+          <h3>Create private group</h3>
+          <p>Create a club, activity challenge, or family group. You will be the owner and can invite other Run Green users.</p>
+
+          <div class="field">
+            <label for="groupNameInput">Group name</label>
+            <input id="groupNameInput" type="text" maxlength="60" placeholder="Example: Brave Weekend Riders" />
+          </div>
+
+          <div class="field">
+  <label for="groupTypeInput">Group type</label>
+  <select id="groupTypeInput" onchange="toggleChallengeDateFields()">
+    <option value="club">Club</option>
+    <option value="challenge">Activity Challenge</option>
+    <option value="family">Family</option>
+  </select>
+</div>
+
+<div id="challengeDateRow" class="form-row two-cols hidden">
+  <div class="field">
+    <label for="groupStartDateInput">Start date</label>
+    <input id="groupStartDateInput" type="date" />
+  </div>
+
+  <div class="field">
+    <label for="groupEndDateInput">End date</label>
+    <input id="groupEndDateInput" type="date" />
+  </div>
+</div>
+
+<div class="field">
+  <label for="groupDescriptionInput">Description</label>
+  <input id="groupDescriptionInput" type="text" maxlength="160" placeholder="Optional short description" />
+</div>
+
+          <div class="settings-actions">
+            <button class="btn-primary" onclick="createRideGroup()">Create group</button>
+          </div>
+
+          <div id="groupStatus" class="status"></div>
+        </div>
+
+        <div class="dash-header">
+          <h2 id="dashboardTitle">My Run & Walk dashboard</h2>
+          <p class="dash-helper">Uploaded summaries from the Run Green app.</p>
+        </div>
+
+        <div class="stat-grid">
+          <div class="stat">
+            <div class="stat-label">Activities</div>
+            <div id="statRides" class="stat-value accent">0</div>
+          </div>
+
+          <div class="stat">
+            <div class="stat-label">Distance</div>
+            <div id="statDistance" class="stat-value">0</div>
+          </div>
+
+          <div class="stat">
+            <div class="stat-label">Calories</div>
+            <div id="statCalories" class="stat-value">0</div>
+          </div>
+
+          <div class="stat">
+            <div class="stat-label">Elevation</div>
+            <div id="statElevation" class="stat-value">0</div>
+          </div>
+
+          <div class="stat">
+            <div class="stat-label">Duration</div>
+            <div id="statDuration" class="stat-value">0</div>
+          </div>
+
+          <div class="stat">
+            <div class="stat-label">Best benchmark</div>
+            <div id="statBenchmark" class="stat-value accent">0%</div>
+          </div>
+        </div>
+
+        <div id="groupsSection" class="hidden">
+          <hr class="section-divider" />
+
+          <div class="dash-header">
+            <h2>My groups</h2>
+            <p class="dash-helper">Manage your clubs, riding parties, and family groups.</p>
+          </div>
+
+          <div id="myGroupsList" class="groups-list"></div>
+        </div>
+
+        <hr class="section-divider" />
+
+        <div class="controls">
+          <select id="activityTypeFilter" onchange="selectedChartDate = ''; renderRides()">
+            <option value="">Run &amp; Walk</option>
+            <option value="run">Runs</option>
+            <option value="walk">Walks</option>
+          </select>
+
+          <div class="search-wrap">
+            <span class="search-icon">🔍</span>
+            <input id="searchInput" type="search" placeholder="Search by date…" oninput="selectedChartDate = ''; renderRides()" />
+          </div>
+
+          <select id="yearFilter" onchange="selectedChartDate = ''; expandedMonths.clear(); expandedYears.clear(); renderRides()">
+            <option value="">All years</option>
+          </select>
+
+          <select id="monthFilter" onchange="selectedChartDate = ''; expandedMonths.clear(); expandedYears.clear(); renderRides()">
+            <option value="">All months</option>
+            <option value="01">January</option>
+            <option value="02">February</option>
+            <option value="03">March</option>
+            <option value="04">April</option>
+            <option value="05">May</option>
+            <option value="06">June</option>
+            <option value="07">July</option>
+            <option value="08">August</option>
+            <option value="09">September</option>
+            <option value="10">October</option>
+            <option value="11">November</option>
+            <option value="12">December</option>
+          </select>
+        </div>
+
+        <div class="chart-card">
+          <div class="chart-header">
+            <div>
+              <div class="chart-title">Performance chart</div>
+              <div id="chartSubtitle" class="chart-subtitle">Follows the year and month filters above.</div>
+            </div>
+
+            <select id="chartMetric" class="chart-control" onchange="selectedChartDate = ''; renderRides()">
+              <option value="distance">Distance</option>
+              <option value="duration">Time</option>
+              <option value="benchmark">Activity score</option>
+              <option value="pace">Average pace</option>
+              <option value="elevation">Elevation</option>
+              <option value="calories">Calories</option>
+            </select>
+          </div>
+
+          <div class="chart-wrap">
+            <canvas id="rideChart"></canvas>
+          </div>
+        </div>
+
+        <div id="ridesList" class="activities-list"></div>
+
+        <p class="footer-note">
+          Run Green respects your privacy. Uploaded activity summaries are shown only in your private account.
+          View the
+          <a href="https://runwalk.thegreenportfolio.ca/privacy.html" target="_blank" rel="noopener noreferrer">
+            Privacy & Safety Policy
+          </a>.
+        </p>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const SUPABASE_URL = "https://wstnsrizuhzezectivwf.supabase.co";
+    const SUPABASE_KEY = "sb_publishable_GE5PhqdYjJ3RCcXgkJxjeA_Ry9Oh-Oz";
+
+    const client = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    let allRides = [];
+    let allGroups = [];
+    let currentUser = null;
+    let currentProfile = null;
+    let rideChart = null;
+    let expandedMonths = new Set();
+    let expandedYears = new Set();
+    let expandedGroupMembers = new Set();
+    let selectedChartDate = "";
+
+    const loginSection = document.getElementById("loginSection");
+    const dashboardSection = document.getElementById("dashboardSection");
+    const signedInActions = document.getElementById("signedInActions");
+    const userDisplayName = document.getElementById("userDisplayName");
+    const loginStatus = document.getElementById("loginStatus");
+    const settingsPanel = document.getElementById("settingsPanel");
+    const displayNameInput = document.getElementById("displayNameInput");
+    const settingsStatus = document.getElementById("settingsStatus");
+
+    async function checkSession() {
+      const { data, error } = await client.auth.getSession();
+
+      if (error) {
+        showLoginStatus(error.message);
+        return;
+      }
+
+      const session = data.session;
+
+      if (session && session.user) {
+        currentUser = session.user;
+        await showDashboard(session.user);
+        await refreshDashboard();
+      } else {
+        showLogin();
+      }
+    }
+
+    async function signIn() {
+      const email = document.getElementById("email").value.trim();
+      const password = document.getElementById("password").value;
+
+      if (!email || !password) {
+        showLoginStatus("Please enter your email and password.");
+        return;
+      }
+
+      setLoginLoading(true);
+      showLoginStatus("");
+
+      const { data, error } = await client.auth.signInWithPassword({
+        email,
+        password
+      });
+
+      setLoginLoading(false);
+
+      if (error) {
+        showLoginStatus(error.message);
+        return;
+      }
+
+      currentUser = data.user;
+      await showDashboard(data.user);
+      await refreshDashboard();
+    }
+
+    async function signOut() {
+      await client.auth.signOut();
+
+      currentUser = null;
+      currentProfile = null;
+      allRides = [];
+      allGroups = [];
+
+      if (rideChart) {
+        rideChart.destroy();
+        rideChart = null;
+      }
+
+      showLogin();
+    }
+
+    async function refreshDashboard() {
+      if (!currentUser) return;
+
+      await loadRides();
+      await loadGroups();
+    }
+
+    async function loadProfile(user) {
+      const { data, error } = await client
+        .from("profiles")
+        .select("id, display_name, email")
+        .eq("id", user.id)
+        .single();
+
+      const dashboardTitle = document.getElementById("dashboardTitle");
+
+      if (error) {
+        currentProfile = null;
+        userDisplayName.textContent = user.email || "Signed in";
+        displayNameInput.value = "";
+
+        if (dashboardTitle) {
+          dashboardTitle.textContent = "My Run & Walk dashboard";
+        }
+
+        return;
+      }
+
+      currentProfile = data;
+
+      const displayName = (data.display_name || "").trim();
+
+      userDisplayName.textContent = displayName || user.email || "Signed in";
+      displayNameInput.value = displayName;
+
+      if (dashboardTitle) {
+        dashboardTitle.textContent = displayName
+          ? `${displayName}'s activity dashboard`
+          : "My Run & Walk dashboard";
+      }
+    }
+
+    function toggleSettings() {
+      settingsStatus.textContent = "";
+      settingsStatus.classList.remove("success");
+
+      const groupStatus = document.getElementById("groupStatus");
+      if (groupStatus) {
+        groupStatus.textContent = "";
+        groupStatus.classList.remove("success");
+      }
+
+      settingsPanel.classList.toggle("hidden");
+    }
+
+    async function saveDisplayName() {
+      if (!currentUser) return;
+
+      const displayName = displayNameInput.value.trim();
+
+      if (!displayName) {
+        settingsStatus.classList.remove("success");
+        settingsStatus.textContent = "Please enter a display name.";
+        return;
+      }
+
+      settingsStatus.classList.remove("success");
+      settingsStatus.textContent = "Saving...";
+
+      const { data, error } = await client
+        .from("profiles")
+        .upsert({
+          id: currentUser.id,
+          email: currentUser.email,
+          display_name: displayName
+        }, {
+          onConflict: "id"
+        })
+        .select("id, display_name, email")
+        .single();
+
+      if (error) {
+        settingsStatus.classList.remove("success");
+        settingsStatus.textContent = error.message;
+        return;
+      }
+
+      currentProfile = data;
+      userDisplayName.textContent = data.display_name || currentUser.email || "Signed in";
+
+      const dashboardTitle = document.getElementById("dashboardTitle");
+
+      if (dashboardTitle) {
+        dashboardTitle.textContent = data.display_name
+          ? `${data.display_name}'s activity dashboard`
+          : "My Run & Walk dashboard";
+      }
+
+      settingsStatus.classList.add("success");
+      settingsStatus.textContent = "Display name saved.";
+    }
+
+    async function createRideGroup() {
+  if (!currentUser) return;
+
+  const groupStatus = document.getElementById("groupStatus");
+  const nameInput = document.getElementById("groupNameInput");
+  const typeInput = document.getElementById("groupTypeInput");
+  const startDateInput = document.getElementById("groupStartDateInput");
+  const endDateInput = document.getElementById("groupEndDateInput");
+  const descriptionInput = document.getElementById("groupDescriptionInput");
+
+  const name = nameInput.value.trim();
+  const groupType = typeInput.value;
+  const startDate = startDateInput.value;
+  const endDate = endDateInput.value;
+  const description = descriptionInput.value.trim();
+
+  if (!name) {
+    groupStatus.classList.remove("success");
+    groupStatus.textContent = "Please enter a group name.";
+    return;
+  }
+
+  if (groupType === "challenge" && (!startDate || !endDate)) {
+    groupStatus.classList.remove("success");
+    groupStatus.textContent = "Please select a start and end date for the challenge.";
+    return;
+  }
+
+  if (startDate && endDate && endDate < startDate) {
+    groupStatus.classList.remove("success");
+    groupStatus.textContent = "End date must be after start date.";
+    return;
+  }
+
+  groupStatus.classList.remove("success");
+  groupStatus.textContent = "Creating group...";
+
+  const { data: group, error: groupError } = await client
+    .from("run_groups")
+    .insert({
+  owner_id: currentUser.id,
+  name,
+  group_type: groupType,
+  description: description || null,
+  start_date: groupType === "challenge" ? startDate : null,
+  end_date: groupType === "challenge" ? endDate : null
+})
+    .select("*")
+    .single();
+
+  if (groupError) {
+    groupStatus.classList.remove("success");
+    groupStatus.textContent = groupError.message;
+    return;
+  }
+
+  const { error: memberError } = await client
+    .from("run_group_members")
+    .insert({
+      group_id: group.id,
+      user_id: currentUser.id,
+      role: "owner"
+    });
+
+  if (memberError) {
+    groupStatus.classList.remove("success");
+    groupStatus.textContent = memberError.message;
+    return;
+  }
+
+  nameInput.value = "";
+typeInput.value = "club";
+startDateInput.value = "";
+endDateInput.value = "";
+descriptionInput.value = "";
+toggleChallengeDateFields();
+
+  groupStatus.classList.add("success");
+  groupStatus.textContent = "Group created.";
+
+  await loadGroups();
+}
+
+function toggleChallengeDateFields() {
+  const typeInput = document.getElementById("groupTypeInput");
+  const dateRow = document.getElementById("challengeDateRow");
+  const startDateInput = document.getElementById("groupStartDateInput");
+  const endDateInput = document.getElementById("groupEndDateInput");
+
+  if (!typeInput || !dateRow) return;
+
+  const isChallenge = typeInput.value === "challenge";
+
+  dateRow.classList.toggle("hidden", !isChallenge);
+
+  if (!isChallenge) {
+    startDateInput.value = "";
+    endDateInput.value = "";
+  }
+}
+
+    function generateInviteCode() {
+      const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+      let code = "";
+
+      for (let i = 0; i < 8; i++) {
+        code += alphabet[Math.floor(Math.random() * alphabet.length)];
+      }
+
+      return code;
+    }
+
+    async function createGroupInvite(groupId) {
+      if (!currentUser) return;
+
+      const inviteCode = generateInviteCode();
+
+      const { data, error } = await client
+        .from("run_group_invites")
+        .insert({
+          group_id: groupId,
+          invite_code: inviteCode,
+          created_by: currentUser.id,
+          is_active: true
+        })
+        .select("*")
+        .single();
+
+      if (error) {
+        alert(error.message);
+        return;
+      }
+
+      const inviteLink = `https://run.thegreenportfolio.ca/join.html?code=${encodeURIComponent(inviteCode)}`;
+
+      try {
+        await navigator.clipboard.writeText(inviteLink);
+        alert(`Invite link copied:\n${inviteLink}`);
+      } catch {
+        alert(`Invite link created:\n${inviteLink}`);
+      }
+    }
+
+    async function loadGroups() {
+  if (!currentUser) return;
+
+  const { data, error } = await client.rpc("get_my_run_groups_with_members");
+
+  if (error) {
+    console.error("Could not load groups:", error.message);
+
+    const section = document.getElementById("groupsSection");
+    const list = document.getElementById("myGroupsList");
+
+    if (section) section.classList.remove("hidden");
+    if (list) {
+      list.innerHTML = `<div class="empty">Could not load groups: ${escapeHtml(error.message)}</div>`;
+    }
+
+    return;
+  }
+
+  allGroups = (data || []).map(group => ({
+  id: group.group_id,
+  name: group.group_name,
+  group_type: group.group_type,
+  description: group.group_description,
+  start_date: group.start_date,
+  end_date: group.end_date,
+  created_at: group.group_created_at,
+  owner_id: group.owner_id,
+  role: group.my_role,
+  members: group.members || []
+}));
+
+  renderGroups();
+}
+
+    function renderGroups() {
+  const section = document.getElementById("groupsSection");
+  const list = document.getElementById("myGroupsList");
+
+  if (!section || !list) return;
+
+  if (!allGroups.length) {
+    section.classList.add("hidden");
+    list.innerHTML = "";
+    return;
+  }
+
+  section.classList.remove("hidden");
+
+  list.innerHTML = allGroups.map(group => {
+    const role = group.role || "member";
+    const canInvite = role === "owner";
+    const members = group.members || [];
+    const memberCount = members.length;
+    const isExpanded = expandedGroupMembers.has(group.id);
+
+    return `
+      <article class="group-card">
+        <div>
+          <div class="group-title">${escapeHtml(group.name)}</div>
+
+          <div class="group-meta">
+            ${escapeHtml(groupTypeLabel(group.group_type))} • ${escapeHtml(role)}
+          </div>
+
+          ${
+            group.description
+              ? `<div class="group-meta">${escapeHtml(group.description)}</div>`
+              : ""
+          }
+          ${
+  group.group_type === "challenge" && (group.start_date || group.end_date)
+    ? `<div class="group-meta">Challenge dates: ${escapeHtml(formatDate(group.start_date))} – ${escapeHtml(formatDate(group.end_date))}</div>`
+    : ""
+}
+
+          <div class="group-member-count">
+            Members: ${memberCount}
+          </div>
+
+          ${
+  isExpanded
+    ? `<div class="group-members">
+        ${members.map(member => groupMemberHTML(member, group)).join("")}
+
+        ${
+          isGroupOwner(group)
+            ? `<div class="group-danger-zone">
+                <button class="btn-small-soft-danger" onclick="deleteRideGroup('${escapeHtml(group.id)}', '${escapeHtml(group.name)}')">
+                  Delete group
+                </button>
+              </div>`
+            : ""
+        }
+      </div>`
+    : ""
+}
+        </div>
+
+        <div class="group-actions">
+  <button class="btn-primary" onclick="openGroupDashboard('${escapeHtml(group.id)}', '${escapeHtml(group.group_type)}')">
+    Open ${escapeHtml(group.name)}
+  </button>
+
+  <button class="btn-ghost" onclick="toggleGroupMembers('${escapeHtml(group.id)}')">
+    ${isExpanded ? "Hide members" : "View members"}
+  </button>
+
+  ${
+    canInvite
+      ? `<button class="btn-ghost" onclick="createGroupInvite('${escapeHtml(group.id)}')">
+          Create invite
+        </button>`
+      : `<button class="btn-ghost" disabled>Joined</button>`
+  }
+</div>
+      </article>
+    `;
+  }).join("");
+}
+
+function openGroupDashboard(groupId, groupType) {
+  const page = groupType === "challenge"
+    ? "challenge.html"
+    : "club.html";
+
+  window.location.href = `${page}?group_id=${encodeURIComponent(groupId)}`;
+}
+
+function toggleGroupMembers(groupId) {
+  if (expandedGroupMembers.has(groupId)) {
+    expandedGroupMembers.delete(groupId);
+  } else {
+    expandedGroupMembers.add(groupId);
+  }
+
+  renderGroups();
+}
+
+function groupMemberHTML(member, group) {
+  const role = member.role || "member";
+
+  const name =
+    member.display_name ||
+    member.email ||
+    `Member ${shortId(member.user_id)}`;
+
+  const canRemove =
+    isGroupOwner(group) &&
+    member.user_id !== group.owner_id;
+
+  return `
+    <div class="group-member-row">
+      <div>
+        <span class="group-member-name">${escapeHtml(name)}</span>
+        <span class="group-member-role"> • ${escapeHtml(role)}</span>
+      </div>
+
+      ${
+        canRemove
+          ? `<button class="btn-small-soft-danger" onclick="removeGroupMember('${escapeHtml(group.id)}', '${escapeHtml(member.user_id)}', '${escapeHtml(name)}')">
+              Remove
+            </button>`
+          : ""
+      }
+    </div>
+  `;
+}
+
+    function groupTypeLabel(type) {
+  if (type === "club") return "Club";
+  if (type === "challenge") return "Activity Challenge";
+  if (type === "family") return "Family";
+  return "Group";
+}
+
+    async function loadRides() {
+      if (!currentUser) return;
+
+      const { data, error } = await client
+        .from("run_activities")
+        .select("*")
+        .eq("user_id", currentUser.id)
+        .order("activity_date", { ascending: false });
+
+      if (error) {
+        document.getElementById("ridesList").innerHTML =
+          `<div class="empty">Could not load activities: ${escapeHtml(error.message)}</div>`;
+        return;
+      }
+
+      allRides = data || [];
+      populateYearFilter();
+      renderRides();
+    }
+    
+    function isGroupOwner(group) {
+  return currentUser && group.owner_id === currentUser.id;
+}
+
+async function removeGroupMember(groupId, userId, memberName) {
+  const confirmed = confirm(`Remove ${memberName} from this group? Their activities will not be deleted.`);
+
+  if (!confirmed) return;
+
+  const { error } = await client.rpc("remove_run_group_member", {
+    p_group_id: groupId,
+    p_user_id: userId
+  });
+
+  if (error) {
+    alert(error.message);
+    return;
+  }
+
+  await loadGroups();
+}
+
+async function deleteRideGroup(groupId, groupName) {
+  const typed = prompt(`To delete "${groupName}", type DELETE. Activities will not be deleted.`);
+
+  if (typed !== "DELETE") return;
+
+  const { error } = await client.rpc("delete_run_group", {
+    p_group_id: groupId
+  });
+
+  if (error) {
+    alert(error.message);
+    return;
+  }
+
+  alert("Group deleted.");
+  await loadGroups();
+}
+    
+
+    function renderRides() {
+      const ridesList = document.getElementById("ridesList");
+      const search = document.getElementById("searchInput").value.trim().toLowerCase();
+      const year = document.getElementById("yearFilter").value;
+      const month = document.getElementById("monthFilter").value;
+      const activityType = document.getElementById("activityTypeFilter").value;
+
+      let activities = [...allRides];
+
+      if (activityType) activities = activities.filter(r => r.activity_type === activityType);
+      if (year) activities = activities.filter(r => String(r.activity_day || "").slice(0, 4) === year);
+      if (month) activities = activities.filter(r => String(r.activity_day || "").slice(5, 7) === month);
+
+      if (search) {
+  activities = activities.filter(r => {
+    const rawDate = String(r.activity_day || r.activity_date || "");
+    const shortDate = formatDate(rawDate).toLowerCase();
+    const longDate = formatLongDate(rawDate).toLowerCase();
+
+    const combined = [
+      rawDate,
+      shortDate,
+      longDate
+    ].join(" ").toLowerCase();
+
+    return combined.includes(search);
+  });
+}
+
+      updateStats(activities);
+updateRideChart(activities);
+
+let visibleRides = [...activities];
+
+if (selectedChartDate) {
+  visibleRides = visibleRides.filter(activity => {
+    const rideDate = String(activity.activity_day || activity.activity_date || "").slice(0, 10);
+    return rideDate === selectedChartDate;
+  });
+}
+
+if (!visibleRides.length) {
+  ridesList.innerHTML = `<div class="empty">No activities found.</div>`;
+  return;
+}
+
+if (selectedChartDate) {
+  ridesList.innerHTML = `
+    <div class="selected-date-toolbar">
+      <span>Showing activity for ${escapeHtml(formatDate(selectedChartDate))}</span>
+      <button class="btn-ghost" onclick="clearSelectedChartDate()">Show all activities</button>
+    </div>
+    ${visibleRides.map(activity => rideCardHTML(activity, true)).join("")}
+  `;
+  return;
+}
+
+if (!year && !month) {
+  ridesList.innerHTML = yearlyGroupedRidesHTML(visibleRides);
+  return;
+}
+
+if (year && !month) {
+  ridesList.innerHTML = monthlyGroupedRidesHTML(visibleRides);
+  return;
+}
+
+ridesList.innerHTML = visibleRides.map(activity => rideCardHTML(activity)).join("");
+}
+
+    function yearlyGroupedRidesHTML(activities) {
+      const groups = {};
+
+      activities.forEach(activity => {
+        const key = yearKeyFromRide(activity);
+        if (!key) return;
+
+        if (!groups[key]) groups[key] = [];
+        groups[key].push(activity);
+      });
+
+      const yearKeys = Object.keys(groups).sort().reverse();
+
+      return yearKeys.map(yearKey => {
+        const yearRides = groups[yearKey];
+        const isExpanded = expandedYears.has(yearKey);
+
+        return `
+          <section class="year-group">
+            <button class="year-header" onclick="toggleYear('${escapeHtml(yearKey)}')">
+              <div>
+                <div class="year-title">${escapeHtml(yearKey)}</div>
+                <div class="year-summary">${escapeHtml(monthSummaryHTML(yearRides))}</div>
+              </div>
+
+              <div class="year-chevron">${isExpanded ? "−" : "+"}</div>
+            </button>
+
+            ${
+              isExpanded
+                ? `<div class="year-months">${monthlyGroupedRidesHTML(yearRides)}</div>`
+                : ""
+            }
+          </section>
+        `;
+      }).join("");
+    }
+
+    function monthlyGroupedRidesHTML(activities) {
+      const groups = {};
+
+      activities.forEach(activity => {
+        const key = monthKeyFromRide(activity);
+        if (!key) return;
+
+        if (!groups[key]) groups[key] = [];
+        groups[key].push(activity);
+      });
+
+      const monthKeys = Object.keys(groups).sort().reverse();
+
+      return monthKeys.map(monthKey => {
+        const monthRides = groups[monthKey];
+        const isExpanded = expandedMonths.has(monthKey);
+
+        return `
+          <section class="month-group">
+            <button class="month-header" onclick="toggleMonth('${escapeHtml(monthKey)}')">
+              <div>
+                <div class="month-title">${escapeHtml(formatMonthTitle(monthKey))}</div>
+                <div class="month-summary">${escapeHtml(monthSummaryHTML(monthRides))}</div>
+              </div>
+
+              <div class="month-chevron">${isExpanded ? "−" : "+"}</div>
+            </button>
+
+            ${
+              isExpanded
+                ? `<div class="month-activities">${monthRides.map(activity => rideCardHTML(activity)).join("")}</div>`
+                : ""
+            }
+          </section>
+        `;
+      }).join("");
+    }
+
+    function yearKeyFromRide(activity) {
+      return String(activity.activity_day || activity.activity_date || "").slice(0, 4);
+    }
+
+    function monthKeyFromRide(activity) {
+      return String(activity.activity_day || activity.activity_date || "").slice(0, 7);
+    }
+
+    function toggleYear(yearKey) {
+      if (expandedYears.has(yearKey)) {
+        expandedYears.delete(yearKey);
+      } else {
+        expandedYears.add(yearKey);
+      }
+
+      renderRides();
+    }
+
+    function toggleMonth(monthKey) {
+      if (expandedMonths.has(monthKey)) {
+        expandedMonths.delete(monthKey);
+      } else {
+        expandedMonths.add(monthKey);
+      }
+
+      renderRides();
+    }
+
+    function formatMonthTitle(monthKey) {
+      const date = new Date(`${monthKey}-01T00:00:00`);
+
+      if (Number.isNaN(date.getTime())) return monthKey;
+
+      return date.toLocaleDateString(undefined, {
+        month: "long",
+        year: "numeric"
+      });
+    }
+
+    function monthSummaryHTML(monthRides) {
+      const rideCount = monthRides.length;
+      const distance = sum(monthRides, "distance_value");
+      const calories = monthRides.reduce((t, r) => t + (Number(r.calories) || 0), 0);
+      const durationSeconds = monthRides.reduce((t, r) => t + (Number(r.duration_seconds) || 0), 0);
+      const distanceUnit = monthRides[0]?.distance_unit || "";
+
+      return `${rideCount} activity${rideCount === 1 ? "" : "s"} • ${formatNumber(distance, 1)} ${distanceUnit} • ${Math.round(calories)} kcal • ${formatDuration(durationSeconds)}`;
+    }
+
+    function rideCardHTML(activity, isSelected = false) {
+      const date = formatDate(activity.activity_day || activity.activity_date);
+      const benchmark = safeNumber(activity.activity_score);
+      const distance = safeNumber(activity.distance_value);
+      const avgPace = safeNumber(activity.average_pace_seconds);
+      const elevation = safeNumber(activity.elevation_gain_value);
+      const calories = activity.calories ?? 0;
+      const duration = formatDuration(activity.duration_seconds || 0);
+
+      return `
+        <article class="activity-card ${isSelected ? "selected-activity" : ""}">
+          <div>
+            <div class="activity-date">${escapeHtml(date)}</div>
+            <div class="activity-small">${escapeHtml(activityTypeLabel(activity.activity_type))} • ID: ${escapeHtml(shortId(activity.local_activity_id || activity.id))}</div>
+          </div>
+
+          <div>
+            <div class="metric-label">${escapeHtml(activityTypeLabel(activity.activity_type))} Activity Score</div>
+            <div class="metric-value green">${formatNumber(benchmark, 1)}%</div>
+          </div>
+
+          <div>
+            <div class="metric-label">Distance</div>
+            <div class="metric-value">${formatNumber(distance, 2)} ${escapeHtml(activity.distance_unit || "")}</div>
+          </div>
+
+          <div>
+            <div class="metric-label">Average pace</div>
+            <div class="metric-value">${escapeHtml(formatPace(avgPace, activity.pace_unit))}</div>
+          </div>
+
+          <div>
+            <div class="metric-label">Elevation</div>
+            <div class="metric-value">${formatNumber(elevation, 0)} ${escapeHtml(activity.elevation_unit || "")}</div>
+          </div>
+
+          <div>
+            <div class="metric-label">Calories</div>
+            <div class="metric-value">${escapeHtml(String(calories))} kcal</div>
+            <div class="activity-small">${escapeHtml(duration)}</div>
+          </div>
+        </article>
+      `;
+    }
+
+    function updateStats(activities) {
+      const distance = sum(activities, "distance_value");
+      const calories = activities.reduce((t, r) => t + (Number(r.calories) || 0), 0);
+      const elevation = sum(activities, "elevation_gain_value");
+      const durationSeconds = activities.reduce((t, r) => t + (Number(r.duration_seconds) || 0), 0);
+      const bestBenchmark = activities.reduce((b, r) => Math.max(b, Number(r.activity_score) || 0), 0);
+      const distanceUnit = activities[0]?.distance_unit || "";
+      const elevationUnit = activities[0]?.elevation_unit || "";
+
+      document.getElementById("statRides").textContent = activities.length;
+      document.getElementById("statDistance").textContent = `${formatNumber(distance, 1)} ${distanceUnit}`;
+      document.getElementById("statCalories").textContent = `${Math.round(calories)} kcal`;
+      document.getElementById("statElevation").textContent = `${formatNumber(elevation, 0)} ${elevationUnit}`;
+      document.getElementById("statDuration").textContent = formatDuration(durationSeconds);
+      document.getElementById("statBenchmark").textContent = `${formatNumber(bestBenchmark, 1)}%`;
+    }
+
+    function chartMetricColors(metric) {
+      if (metric === "distance") {
+        return {
+          background: "rgba(59,130,246,0.62)",
+          hover: "rgba(96,165,250,0.86)"
+        };
+      }
+
+      if (metric === "benchmark") {
+        return {
+          background: "rgba(34,197,94,0.62)",
+          hover: "rgba(74,222,128,0.86)"
+        };
+      }
+
+      if (metric === "calories") {
+        return {
+          background: "rgba(249,115,22,0.62)",
+          hover: "rgba(251,146,60,0.86)"
+        };
+      }
+
+      if (metric === "pace") {
+        return {
+          background: "rgba(239,68,68,0.62)",
+          hover: "rgba(248,113,113,0.86)"
+        };
+      }
+
+      if (metric === "duration") {
+        return {
+          background: "rgba(21,128,61,0.68)",
+          hover: "rgba(34,197,94,0.88)"
+        };
+      }
+
+      if (metric === "elevation") {
+        return {
+          background: "rgba(146,64,14,0.68)",
+          hover: "rgba(180,83,9,0.88)"
+        };
+      }
+
+      return {
+        background: "rgba(34,197,94,0.55)",
+        hover: "rgba(74,222,128,0.75)"
+      };
+    }
+    
+    function clearSelectedChartDate() {
+  selectedChartDate = "";
+  renderRides();
+}
+
+    function updateRideChart(activities) {
+      const canvas = document.getElementById("rideChart");
+      const chartSubtitle = document.getElementById("chartSubtitle");
+
+      if (!canvas) return;
+
+      const metric = document.getElementById("chartMetric").value;
+      const year = document.getElementById("yearFilter").value;
+      const month = document.getElementById("monthFilter").value;
+      const chartData = buildChartData(activities, metric, Boolean(month));
+      const metricInfo = chartMetricInfo(metric, activities);
+      const metricColors = chartMetricColors(metric);
+
+      chartSubtitle.textContent = month
+        ? "Daily values for the selected month."
+        : year ? "Monthly values for the selected year."
+        : "Monthly values across all uploaded activities.";
+
+      if (rideChart) rideChart.destroy();
+
+      rideChart = new Chart(canvas, {
+        type: "bar",
+        data: {
+          labels: chartData.labels,
+          datasets: [{
+            label: metricInfo.label,
+            data: chartData.values,
+            borderWidth: 0,
+            borderRadius: 6,
+            backgroundColor: metricColors.background,
+            hoverBackgroundColor: metricColors.hover
+          }]
+        },
+        options: {
+  responsive: true,
+  maintainAspectRatio: false,
+  onClick: (_event, elements) => {
+    if (!elements.length) return;
+
+    const index = elements[0].index;
+    const key = chartData.keys[index];
+
+    if (!key) return;
+
+    if (month && key.length === 10) {
+      selectedChartDate = key;
+      renderRides();
+
+      setTimeout(() => {
+        const firstSelected = document.querySelector(".selected-activity");
+        if (firstSelected) {
+          firstSelected.scrollIntoView({
+            behavior: "smooth",
+            block: "start"
+          });
+        }
+      }, 100);
+    }
+  },
+          plugins: {
+            legend: {
+              labels: {
+                color: "#9ca3af",
+                font: {
+                  size: 13,
+                  weight: "600"
+                },
+                boxWidth: 10,
+                boxHeight: 10,
+                borderRadius: 3
+              }
+            },
+            tooltip: {
+              backgroundColor: "rgba(13,22,16,0.92)",
+              titleColor: "#f0fdf4",
+              bodyColor: "#9ca3af",
+              borderColor: metricColors.background,
+              borderWidth: 1,
+              padding: 12,
+              cornerRadius: 10,
+              callbacks: {
+                label: ctx => `${metricInfo.label}: ${formatNumber(ctx.raw, metricInfo.decimals)} ${metricInfo.unit}`
+              }
+            }
+          },
+          scales: {
+            x: {
+              ticks: {
+                color: "#8a958f",
+                font: {
+                  size: 12
+                }
+              },
+              grid: {
+                color: "rgba(255,255,255,0.05)",
+                drawBorder: false
+              }
+            },
+            y: {
+              beginAtZero: true,
+              ticks: {
+                color: "#8a958f",
+                font: {
+                  size: 12
+                },
+                callback: v => `${v}${metricInfo.shortUnit}`
+              },
+              grid: {
+                color: "rgba(255,255,255,0.05)",
+                drawBorder: false
+              }
+            }
+          }
+        }
+      });
+    }
+
+    function buildChartData(activities, metric, showDays) {
+  const groups = {};
+
+  activities.forEach(activity => {
+    const rawDate = String(activity.activity_day || activity.activity_date || "");
+    const key = showDays
+      ? rawDate.slice(0, 10)
+      : rawDate.slice(0, 7);
+
+    if (!key) return;
+
+    if (!groups[key]) groups[key] = [];
+    groups[key].push(activity);
+  });
+
+  const keys = Object.keys(groups).sort();
+
+  return {
+    keys,
+    labels: keys.map(k => showDays ? formatChartDay(k) : formatChartMonth(k)),
+    values: keys.map(k => chartGroupValue(groups[k], metric))
+  };
+}
+
+    function chartGroupValue(activities, metric) {
+      if (!activities.length) return 0;
+      if (metric === "distance") return sum(activities, "distance_value");
+      if (metric === "duration") return activities.reduce((t, r) => t + (Number(r.duration_seconds) || 0), 0) / 3600;
+      if (metric === "benchmark") return average(activities, "activity_score");
+      if (metric === "pace") return average(activities, "average_pace_seconds");
+      if (metric === "elevation") return sum(activities, "elevation_gain_value");
+      if (metric === "calories") return activities.reduce((t, r) => t + (Number(r.calories) || 0), 0);
+      return 0;
+    }
+
+    function chartMetricInfo(metric, activities) {
+      const f = activities[0] || {};
+
+      if (metric === "distance") {
+        return {
+          label: "Distance",
+          unit: f.distance_unit || "",
+          shortUnit: f.distance_unit ? ` ${f.distance_unit}` : "",
+          decimals: 1
+        };
+      }
+
+      if (metric === "duration") {
+        return {
+          label: "Time",
+          unit: "hours",
+          shortUnit: "h",
+          decimals: 1
+        };
+      }
+
+      if (metric === "benchmark") {
+        return {
+          label: "Benchmark",
+          unit: "%",
+          shortUnit: "%",
+          decimals: 1
+        };
+      }
+
+      if (metric === "pace") {
+        return {
+          label: "Average pace",
+          unit: f.pace_unit || "min/km",
+          shortUnit: " sec",
+          decimals: 0
+        };
+      }
+
+      if (metric === "elevation") {
+        return {
+          label: "Elevation",
+          unit: f.elevation_unit || "",
+          shortUnit: f.elevation_unit ? ` ${f.elevation_unit}` : "",
+          decimals: 0
+        };
+      }
+
+      if (metric === "calories") {
+        return {
+          label: "Calories",
+          unit: "kcal",
+          shortUnit: " kcal",
+          decimals: 0
+        };
+      }
+
+      return {
+        label: "Value",
+        unit: "",
+        shortUnit: "",
+        decimals: 1
+      };
+    }
+
+    function average(rows, key) {
+      if (!rows.length) return 0;
+      return rows.reduce((s, r) => s + (Number(r[key]) || 0), 0) / rows.length;
+    }
+
+    function localDateFromYMD(value) {
+  if (!value) return null;
+
+  const raw = String(value);
+  const datePart = raw.slice(0, 10);
+  const match = datePart.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+
+  if (!match) return null;
+
+  const year = Number(match[1]);
+  const month = Number(match[2]) - 1;
+  const day = Number(match[3]);
+
+  return new Date(year, month, day);
+}
+
+function formatChartDay(value) {
+  const localDate = localDateFromYMD(value);
+
+  if (localDate) {
+    return localDate.toLocaleDateString(undefined, {
+      month: "short",
+      day: "numeric"
+    });
+  }
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) return value;
+
+  return date.toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric"
+  });
+}
+
+function formatChartMonth(value) {
+  const localDate = localDateFromYMD(`${value}-01`);
+
+  if (localDate) {
+    return localDate.toLocaleDateString(undefined, {
+      month: "short",
+      year: "numeric"
+    });
+  }
+
+  const date = new Date(`${value}-01T00:00:00`);
+
+  if (Number.isNaN(date.getTime())) return value;
+
+  return date.toLocaleDateString(undefined, {
+    month: "short",
+    year: "numeric"
+  });
+}
+
+    function populateYearFilter() {
+      const yearFilter = document.getElementById("yearFilter");
+      const existing = yearFilter.value;
+      const years = Array.from(new Set(
+        allRides
+          .map(r => String(r.activity_day || "").slice(0, 4))
+          .filter(Boolean)
+      )).sort().reverse();
+
+      yearFilter.innerHTML =
+        `<option value="">All years</option>` +
+        years.map(y => `<option value="${y}">${y}</option>`).join("");
+
+      if (years.includes(existing)) yearFilter.value = existing;
+    }
+
+    async function showDashboard(user) {
+      loginSection.classList.add("hidden");
+      dashboardSection.classList.remove("hidden");
+      signedInActions.classList.remove("hidden");
+
+      await loadProfile(user);
+    }
+
+    function showLogin() {
+      loginSection.classList.remove("hidden");
+      dashboardSection.classList.add("hidden");
+      signedInActions.classList.add("hidden");
+      userDisplayName.textContent = "";
+      currentProfile = null;
+
+      if (settingsPanel) settingsPanel.classList.add("hidden");
+
+      const groupsSection = document.getElementById("groupsSection");
+      if (groupsSection) groupsSection.classList.add("hidden");
+
+      showLoginStatus("");
+    }
+
+    function setLoginLoading(loading) {
+      const btn = document.getElementById("loginButton");
+      btn.disabled = loading;
+      btn.textContent = loading ? "Signing in…" : "Sign in";
+    }
+
+    function showLoginStatus(msg) {
+      loginStatus.textContent = msg || "";
+    }
+
+    function sum(rows, key) {
+      return rows.reduce((t, r) => t + (Number(r[key]) || 0), 0);
+    }
+
+    function safeNumber(v) {
+      const n = Number(v);
+      return Number.isFinite(n) ? n : 0;
+    }
+
+    function formatNumber(v, d) {
+      return safeNumber(v).toLocaleString(undefined, {
+        minimumFractionDigits: d,
+        maximumFractionDigits: d
+      });
+    }
+
+    function formatDuration(totalSeconds) {
+      totalSeconds = Math.max(0, Number(totalSeconds) || 0);
+
+      const hours = Math.floor(totalSeconds / 3600);
+      const minutes = Math.floor((totalSeconds % 3600) / 60);
+      const seconds = Math.floor(totalSeconds % 60);
+
+      if (hours > 0) return `${hours}h ${String(minutes).padStart(2, "0")}m`;
+      return `${minutes}m ${String(seconds).padStart(2, "0")}s`;
+    }
+
+    function formatDate(value) {
+  if (!value) return "Unknown date";
+
+  const raw = String(value);
+  const datePart = raw.slice(0, 10);
+
+  const match = datePart.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+
+  if (match) {
+    const year = Number(match[1]);
+    const month = Number(match[2]) - 1;
+    const day = Number(match[3]);
+
+    const localDate = new Date(year, month, day);
+
+    return localDate.toLocaleDateString(undefined, {
+      year: "numeric",
+      month: "short",
+      day: "numeric"
+    });
+  }
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) return value;
+
+  return date.toLocaleDateString(undefined, {
+    year: "numeric",
+    month: "short",
+    day: "numeric"
+  });
+}
+    
+    function formatLongDate(value) {
+  if (!value) return "Unknown date";
+
+  const raw = String(value);
+  const datePart = raw.slice(0, 10);
+
+  const match = datePart.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+
+  if (match) {
+    const year = Number(match[1]);
+    const month = Number(match[2]) - 1;
+    const day = Number(match[3]);
+
+    const localDate = new Date(year, month, day);
+
+    return localDate.toLocaleDateString(undefined, {
+      year: "numeric",
+      month: "long",
+      day: "numeric"
+    });
+  }
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) return value;
+
+  return date.toLocaleDateString(undefined, {
+    year: "numeric",
+    month: "long",
+    day: "numeric"
+  });
+}
+
+    function activityTypeLabel(type) {
+      return type === "walk" ? "Walk" : "Run";
+    }
+
+    function formatPace(totalSeconds, unit) {
+      const seconds = Number(totalSeconds);
+      if (!Number.isFinite(seconds) || seconds <= 0) return "—";
+      const minutes = Math.floor(seconds / 60);
+      const remainder = Math.round(seconds % 60).toString().padStart(2, "0");
+      return `${minutes}:${remainder} ${unit || "min/km"}`;
+    }
+
+    function shortId(id) {
+      if (!id) return "—";
+      return String(id).slice(0, 6);
+    }
+
+    function escapeHtml(value) {
+      return String(value ?? "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    checkSession();
+
+    client.auth.onAuthStateChange((_event, session) => {
+      if (session && session.user) {
+        currentUser = session.user;
+
+        showDashboard(session.user).then(async () => {
+          await refreshDashboard();
+        });
+      } else {
+        currentUser = null;
+        currentProfile = null;
+        allRides = [];
+        allGroups = [];
+
+        if (rideChart) {
+          rideChart.destroy();
+          rideChart = null;
+        }
+
+        showLogin();
+      }
+    });
+  </script>
+</body>
+</html>

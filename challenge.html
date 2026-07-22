@@ -1,0 +1,1591 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <title>Run Green Challenge</title>
+  <meta name="description" content="Run Green private activity challenge dashboard." />
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --green: #22c55e;
+      --green-light: #16a34a;
+      --green-dim: #16a34a;
+      --bg: #eef8f1;
+      --body: #e8fbea;
+      --card: #ffffff;
+      --card-soft: #f8fff9;
+      --border: #dfe7e2;
+      --border-soft: #e5e5ea;
+      --text: #111111;
+      --muted: #6e6e73;
+      --muted-2: #6e6e73;
+      --danger: #ef4444;
+      --gold: #fbbf24;
+      --silver: #d1d5db;
+      --bronze: #fb923c;
+      --page-gradient:
+        radial-gradient(circle at top left, #dcfce7 0, transparent 38%),
+        linear-gradient(180deg, #e8fbea 0%, #f5fff7 45%, #e8fbea 100%);
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --green: #44d965;
+        --green-light: #4ade80;
+        --green-dim: #16a34a;
+        --bg: #03130a;
+        --body: #03130a;
+        --card: #112918;
+        --card-soft: #0c2012;
+        --border: rgba(34,197,94,0.14);
+        --border-soft: rgba(255,255,255,0.07);
+        --text: #f0fdf4;
+        --muted: #8a958f;
+        --muted-2: #9ca3af;
+        --page-gradient:
+          radial-gradient(circle at top left, rgba(74,222,128,0.18), transparent 34%),
+          radial-gradient(circle at bottom right, rgba(34,197,94,0.16), transparent 42%),
+          linear-gradient(180deg, #0a2414 0%, #10351f 48%, #092817 100%);
+      }
+    }
+
+    *, *::before, *::after {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--page-gradient);
+      color: var(--text);
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background:
+        radial-gradient(ellipse 70% 45% at 15% -10%, rgba(74,222,128,0.14) 0%, transparent 65%),
+        radial-gradient(ellipse 55% 35% at 85% 105%, rgba(22,163,74,0.12) 0%, transparent 62%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      border-bottom: 1px solid var(--border);
+      background: rgba(255,255,255,0.72);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+    }
+
+    @media (prefers-color-scheme: dark) {
+      header {
+        background: rgba(8,31,17,0.84);
+      }
+    }
+
+    .header-inner {
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 0 24px;
+      height: 68px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .logo {
+      width: 42px;
+      height: 42px;
+      border-radius: 12px;
+      overflow: hidden;
+      flex-shrink: 0;
+      border: 1px solid var(--border);
+      background: var(--card-soft);
+    }
+
+    .logo img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .brand-text h1 {
+      font-size: 17px;
+      font-weight: 700;
+      margin: 0;
+      letter-spacing: -0.3px;
+    }
+
+    .brand-text .subtitle {
+      font-size: 12px;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+
+    .top-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .user-pill {
+      font-size: 13px;
+      color: var(--green-light);
+      background: rgba(34,197,94,0.08);
+      border: 1px solid rgba(34,197,94,0.22);
+      border-radius: 999px;
+      padding: 7px 14px;
+      max-width: 220px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    main {
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 36px 24px 80px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    button {
+      border: 0;
+      cursor: pointer;
+      font-family: inherit;
+      font-weight: 600;
+      font-size: 14px;
+      border-radius: 999px;
+      padding: 9px 18px;
+      transition: all 0.15s ease;
+      color: #fff;
+      white-space: nowrap;
+    }
+
+    button:hover {
+      transform: translateY(-1px);
+    }
+
+    button:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .btn-primary {
+      background: var(--green-dim);
+      box-shadow: 0 0 0 1px rgba(34,197,94,0.4), 0 4px 16px rgba(34,197,94,0.18);
+    }
+
+    .btn-primary:hover {
+      background: var(--green);
+    }
+
+    .btn-ghost {
+      background: transparent;
+      color: var(--muted-2);
+      border: 1px solid var(--border-soft);
+    }
+
+    .btn-ghost:hover {
+      background: var(--card-soft);
+      color: var(--text);
+    }
+
+    .btn-danger-soft {
+      background: rgba(239,68,68,0.1);
+      color: #fca5a5;
+      border: 1px solid rgba(239,68,68,0.25);
+    }
+
+    .card,
+    .login-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      padding: 28px;
+      box-shadow: 0 18px 60px rgba(0,0,0,0.10);
+    }
+
+    .login-card {
+      width: 100%;
+      max-width: 440px;
+      padding: 40px;
+    }
+
+    .login-wrap {
+      min-height: calc(100vh - 120px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+
+    .login-eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--green-light);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-bottom: 14px;
+    }
+
+    .login-eyebrow::before {
+      content: '';
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--green);
+      box-shadow: 0 0 8px var(--green);
+    }
+
+    .login-card h2 {
+      font-size: 26px;
+      font-weight: 800;
+      margin: 0 0 8px;
+    }
+
+    .helper {
+      color: var(--muted-2);
+      font-size: 14px;
+      line-height: 1.6;
+      margin: 0 0 28px;
+    }
+
+    .field {
+      margin-bottom: 16px;
+    }
+
+    label {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      color: var(--muted-2);
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+
+    input, select {
+      width: 100%;
+      padding: 13px 16px;
+      border-radius: 12px;
+      border: 1px solid var(--border-soft);
+      background: var(--card-soft);
+      color: var(--text);
+      font-size: 15px;
+      font-family: inherit;
+      outline: none;
+    }
+
+    input:focus, select:focus {
+      border-color: rgba(34,197,94,0.5);
+      box-shadow: 0 0 0 3px rgba(34,197,94,0.1);
+    }
+
+    select option {
+      background: var(--card);
+      color: var(--text);
+    }
+
+    .button-row {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 6px;
+    }
+
+    .status {
+      margin-top: 14px;
+      font-size: 14px;
+      color: #fca5a5;
+      min-height: 20px;
+    }
+
+    .dash-header {
+      margin-bottom: 24px;
+    }
+
+    .dash-header h2 {
+      font-size: 32px;
+      font-weight: 800;
+      margin: 0 0 6px;
+      letter-spacing: -0.6px;
+    }
+
+    .dash-helper {
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.6;
+    }
+
+    .challenge-controls {
+  display: grid;
+  grid-template-columns: auto minmax(220px, 1fr) auto auto;
+  gap: 12px;
+  align-items: end;
+  margin: 22px 0 24px;
+  padding: 18px;
+  background: var(--card-soft);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+}
+
+.metric-control {
+  min-width: 220px;
+}
+
+    .control-label {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 8px;
+    }
+
+    .challenge-period {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--green-light);
+      background: rgba(34,197,94,0.08);
+      border: 1px solid rgba(34,197,94,0.18);
+      border-radius: 999px;
+      padding: 8px 14px;
+      font-size: 13px;
+      font-weight: 700;
+      margin-top: 8px;
+    }
+
+    .section-divider {
+      border: 0;
+      border-top: 1px solid var(--border-soft);
+      margin: 28px 0 24px;
+    }
+
+    .chart-card {
+      background: var(--card-soft);
+      border: 1px solid var(--border-soft);
+      border-radius: 18px;
+      padding: 22px;
+      margin-bottom: 22px;
+    }
+
+    .chart-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 12px;
+      margin-bottom: 18px;
+    }
+
+    .chart-title {
+      font-size: 17px;
+      font-weight: 800;
+      margin: 0 0 4px;
+    }
+
+    .chart-subtitle {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .chart-wrap {
+      height: 320px;
+      position: relative;
+    }
+
+    .ranking-list {
+      display: grid;
+      gap: 10px;
+      margin-bottom: 28px;
+    }
+
+    .ranking-card {
+      display: grid;
+      grid-template-columns: 62px 1fr auto;
+      gap: 14px;
+      align-items: center;
+      background: var(--card-soft);
+      border: 1px solid var(--border-soft);
+      border-radius: 16px;
+      padding: 16px 18px;
+    }
+
+    .rank-number {
+      width: 42px;
+      height: 42px;
+      border-radius: 14px;
+      display: grid;
+      place-items: center;
+      font-size: 16px;
+      font-weight: 900;
+      background: rgba(34,197,94,0.08);
+      border: 1px solid rgba(34,197,94,0.18);
+      color: var(--green-light);
+    }
+
+    .rank-number.gold {
+      color: #111827;
+      background: var(--gold);
+      border-color: rgba(251,191,36,0.7);
+    }
+
+    .rank-number.silver {
+      color: #111827;
+      background: var(--silver);
+      border-color: rgba(209,213,219,0.7);
+    }
+
+    .rank-number.bronze {
+      color: #111827;
+      background: var(--bronze);
+      border-color: rgba(251,146,60,0.7);
+    }
+
+    .rank-name {
+      font-size: 17px;
+      font-weight: 800;
+      margin-bottom: 4px;
+    }
+
+    .rank-meta {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .rank-value {
+      font-size: 18px;
+      font-weight: 900;
+      color: var(--green-light);
+      text-align: right;
+    }
+
+    .members-list {
+      display: grid;
+      gap: 12px;
+    }
+
+    .member-card {
+      background: var(--card-soft);
+      border: 1px solid var(--border-soft);
+      border-radius: 18px;
+      padding: 20px;
+    }
+
+    .member-top {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      align-items: flex-start;
+    }
+
+    .member-name {
+      font-size: 18px;
+      font-weight: 800;
+      margin-bottom: 4px;
+    }
+
+    .member-meta {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .member-stats {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+      margin-top: 18px;
+    }
+
+    .mini-stat {
+      border: 1px solid var(--border-soft);
+      border-radius: 14px;
+      padding: 12px;
+      background: var(--card-soft);
+    }
+
+    .mini-label {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+
+    .mini-value {
+      font-size: 15px;
+      font-weight: 800;
+    }
+
+    .activities-list {
+      display: grid;
+      gap: 10px;
+      margin-top: 16px;
+      padding-top: 14px;
+      border-top: 1px solid var(--border-soft);
+    }
+
+    .activity-card {
+      background: var(--card-soft);
+      border: 1px solid var(--border-soft);
+      border-radius: 16px;
+      padding: 16px 18px;
+      display: grid;
+      grid-template-columns: 1.3fr repeat(5, 1fr);
+      gap: 14px;
+      align-items: center;
+    }
+
+    .activity-date {
+      font-weight: 700;
+      font-size: 15px;
+    }
+
+    .activity-small {
+      color: var(--muted);
+      font-size: 12px;
+      margin-top: 4px;
+    }
+
+    .metric-label {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 5px;
+    }
+
+    .metric-value {
+      font-size: 15px;
+      font-weight: 700;
+    }
+
+    .metric-value.green {
+      color: var(--green-light);
+    }
+
+    .empty {
+      text-align: center;
+      color: var(--muted);
+      padding: 52px 20px;
+      background: var(--card-soft);
+      border: 1px dashed var(--border-soft);
+      border-radius: 16px;
+      font-size: 15px;
+    }
+
+    .footer-note {
+      margin-top: 32px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.6;
+      padding-top: 20px;
+      border-top: 1px solid var(--border-soft);
+    }
+
+    .footer-note a {
+      color: var(--green-light);
+      font-weight: 700;
+      text-decoration: none;
+    }
+
+    @media (max-width: 900px) {
+      .challenge-controls {
+    grid-template-columns: 1fr;
+    align-items: stretch;
+    }
+
+      .member-stats {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      .activity-card {
+        grid-template-columns: 1fr 1fr;
+      }
+
+      .header-inner {
+        flex-wrap: wrap;
+        height: auto;
+        padding: 14px 20px;
+      }
+
+      .top-actions {
+        width: 100%;
+      }
+
+      .member-top,
+      .chart-header {
+        flex-direction: column;
+      }
+
+      .ranking-card {
+        grid-template-columns: 52px 1fr;
+      }
+
+      .rank-value {
+        grid-column: 2;
+        text-align: left;
+      }
+    }
+
+    @media (max-width: 520px) {
+      main {
+        padding: 20px 16px 60px;
+      }
+
+      .card {
+        padding: 20px;
+      }
+
+      .challenge-controls,
+      .member-stats,
+      .activity-card {
+        grid-template-columns: 1fr;
+      }
+
+      .top-actions button,
+      .button-row button {
+        width: 100%;
+      }
+
+      .chart-wrap {
+        height: 280px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <header>
+    <div class="header-inner">
+      <div class="brand">
+        <div class="logo">
+          <img src="assets/icon.png" alt="Run Green icon">
+        </div>
+
+        <div class="brand-text">
+          <h1>Run Green</h1>
+          <div class="subtitle">Challenge dashboard</div>
+        </div>
+      </div>
+
+      <div id="signedInActions" class="top-actions hidden">
+        <div id="userDisplayName" class="user-pill"></div>
+        <button class="btn-ghost" onclick="goBack()">Back</button>
+        <button class="btn-ghost" onclick="loadChallengeDashboard()">Refresh</button>
+        <button class="btn-danger-soft" onclick="signOut()">Sign out</button>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section id="loginSection" class="login-wrap">
+      <div class="login-card">
+        <div class="login-eyebrow">Secure access</div>
+        <h2>Sign in to view challenge</h2>
+        <p class="helper">Use the same email and password from the Run Green app.</p>
+
+        <div class="field">
+          <label for="email">Email</label>
+          <input id="email" type="email" autocomplete="email" placeholder="you@example.com" />
+        </div>
+
+        <div class="field">
+          <label for="password">Password</label>
+          <input id="password" type="password" autocomplete="current-password" placeholder="••••••••" />
+        </div>
+
+        <div class="button-row">
+          <button id="loginButton" class="btn-primary" onclick="signIn()">Sign in</button>
+          <button class="btn-ghost" onclick="checkSession()">Check session</button>
+        </div>
+
+        <div id="loginStatus" class="status"></div>
+      </div>
+    </section>
+
+    <section id="challengeSection" class="hidden">
+      <div class="card">
+        <div class="dash-header">
+          <h2 id="challengeTitle">Challenge dashboard</h2>
+          <p id="challengeDescription" class="dash-helper">Loading challenge details...</p>
+        </div>
+
+  <div class="challenge-controls">
+  <div id="challengePeriod" class="challenge-period">All uploaded activities</div>
+
+  <div class="metric-control">
+    <div class="control-label">Ranking metric</div>
+    <select id="metricInput">
+      <option value="distance">Distance</option>
+      <option value="pace">Average pace</option>
+      <option value="elevation">Elevation</option>
+    </select>
+  </div>
+
+  <button class="btn-primary" onclick="applyChallengeFilters()">Apply</button>
+  <button class="btn-ghost" onclick="copyChallengeLink()">Copy link</button>
+</div>
+
+        <div class="chart-card">
+          <div class="chart-header">
+            <div>
+              <div id="chartTitle" class="chart-title">Challenge rankings</div>
+              <div id="chartSubtitle" class="chart-subtitle">Ranking members by challenge results.</div>
+            </div>
+          </div>
+
+          <div class="chart-wrap">
+            <canvas id="challengeChart"></canvas>
+          </div>
+        </div>
+
+        <div class="dash-header">
+          <h2>Rankings</h2>
+          <p id="rankingHelper" class="dash-helper">Members are ranked using only activities inside the official challenge dates.</p>
+        </div>
+
+        <div id="rankingList" class="ranking-list"></div>
+
+        <hr class="section-divider" />
+
+        <div class="dash-header">
+          <h2>Members</h2>
+          <p class="dash-helper">Only challenge activities are shown under each member.</p>
+        </div>
+
+        <div id="membersList" class="members-list"></div>
+
+        <p class="footer-note">
+          Run Green respects your privacy. Challenge summaries are only visible to members of this private group.
+          View the
+          <a href="https://runwalk.thegreenportfolio.ca/privacy.html" target="_blank" rel="noopener noreferrer">
+            Privacy & Safety Policy
+          </a>.
+        </p>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const SUPABASE_URL = "https://wstnsrizuhzezectivwf.supabase.co";
+    const SUPABASE_KEY = "sb_publishable_GE5PhqdYjJ3RCcXgkJxjeA_Ry9Oh-Oz";
+
+    const client = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    let currentUser = null;
+    let currentData = null;
+    let challengeChart = null;
+    let expandedMembers = new Set();
+
+    const loginSection = document.getElementById("loginSection");
+    const challengeSection = document.getElementById("challengeSection");
+    const signedInActions = document.getElementById("signedInActions");
+    const userDisplayName = document.getElementById("userDisplayName");
+    const loginStatus = document.getElementById("loginStatus");
+
+    const params = new URLSearchParams(window.location.search);
+    const groupId = params.get("group_id");
+
+    let challengeStart = "";
+    let challengeEnd = "";
+    let selectedMetric = params.get("metric") || "distance";
+
+    if (!["distance", "pace", "elevation"].includes(selectedMetric)) {
+      selectedMetric = "distance";
+    }
+
+    async function checkSession() {
+      const { data, error } = await client.auth.getSession();
+
+      if (error) {
+        showLoginStatus(error.message);
+        return;
+      }
+
+      const session = data.session;
+
+      if (session && session.user) {
+        currentUser = session.user;
+        showChallenge();
+        await loadProfile(session.user);
+        await loadChallengeDashboard();
+      } else {
+        showLogin();
+      }
+    }
+
+    async function signIn() {
+      const email = document.getElementById("email").value.trim();
+      const password = document.getElementById("password").value;
+
+      if (!email || !password) {
+        showLoginStatus("Please enter your email and password.");
+        return;
+      }
+
+      setLoginLoading(true);
+      showLoginStatus("");
+
+      const { data, error } = await client.auth.signInWithPassword({
+        email,
+        password
+      });
+
+      setLoginLoading(false);
+
+      if (error) {
+        showLoginStatus(error.message);
+        return;
+      }
+
+      currentUser = data.user;
+      showChallenge();
+      await loadProfile(data.user);
+      await loadChallengeDashboard();
+    }
+
+    async function signOut() {
+      await client.auth.signOut();
+
+      currentUser = null;
+      currentData = null;
+      expandedMembers.clear();
+      destroyChallengeChart();
+
+      showLogin();
+    }
+
+    async function loadProfile(user) {
+      const { data, error } = await client
+        .from("profiles")
+        .select("display_name, email")
+        .eq("id", user.id)
+        .single();
+
+      if (error) {
+        userDisplayName.textContent = user.email || "Signed in";
+        return;
+      }
+
+      userDisplayName.textContent =
+        data.display_name || data.email || user.email || "Signed in";
+    }
+
+    async function loadChallengeDashboard() {
+      if (!currentUser) return;
+
+      if (!groupId) {
+        renderError("Missing group_id in the page URL.");
+        return;
+      }
+
+      syncControlsFromState();
+
+      const { data, error } = await client.rpc("get_run_group_dashboard", {
+        p_group_id: groupId
+      });
+
+      if (error) {
+        renderError(error.message);
+        return;
+      }
+
+      currentData = data;
+
+const group = currentData.group || {};
+
+challengeStart = group.start_date ? String(group.start_date).slice(0, 10) : "";
+challengeEnd = group.end_date ? String(group.end_date).slice(0, 10) : "";
+
+syncControlsFromState();
+
+renderChallenge();
+    }
+
+    function renderChallenge() {
+      renderChallengeHeader();
+      renderChallengeChart();
+      renderRankings();
+      renderMembers();
+    }
+
+    function renderChallengeHeader() {
+      const group = currentData.group || {};
+      const title = group.name || "Challenge dashboard";
+
+      document.getElementById("challengeTitle").textContent = title;
+
+      const typeLabel = groupTypeLabel(group.group_type);
+      const description = group.description
+        ? `${typeLabel} • ${group.description}`
+        : `${typeLabel} • Private Run Green challenge`;
+
+      document.getElementById("challengeDescription").textContent = description;
+      document.getElementById("challengePeriod").textContent = challengePeriodText();
+    }
+
+    function syncControlsFromState() {
+      document.getElementById("metricInput").value = selectedMetric;
+    }
+
+    function applyChallengeFilters() {
+  selectedMetric = document.getElementById("metricInput").value || "distance";
+
+  const url = new URL(window.location.href);
+
+  url.searchParams.set("group_id", groupId);
+  url.searchParams.set("metric", selectedMetric);
+
+  // Dates are fixed by the challenge itself, not editable from this page.
+  url.searchParams.delete("start");
+  url.searchParams.delete("end");
+
+  window.history.replaceState({}, "", url.toString());
+
+  renderChallenge();
+}
+
+async function copyChallengeLink() {
+  selectedMetric = document.getElementById("metricInput").value || "distance";
+
+  const url = new URL(window.location.href);
+
+  url.searchParams.set("group_id", groupId);
+  url.searchParams.set("metric", selectedMetric);
+
+  url.searchParams.delete("start");
+  url.searchParams.delete("end");
+
+  try {
+    await navigator.clipboard.writeText(url.toString());
+    alert("Challenge link copied.");
+  } catch {
+    alert(url.toString());
+  }
+}
+
+    function getRankedMembers() {
+      const members = currentData?.members || [];
+
+      const rows = members.map(member => {
+        const activities = filterChallengeRides(member.activities || []);
+        const totals = calculateChallengeTotals(activities);
+
+        return {
+          member,
+          activities,
+          totals,
+          score: scoreForMetric(totals, selectedMetric)
+        };
+      });
+
+      return rows.sort((a, b) => b.score - a.score);
+    }
+
+    function filterChallengeRides(activities) {
+      return activities.filter(activity => {
+        const rideDate = String(activity.activity_day || activity.activity_date || "").slice(0, 10);
+
+        if (!rideDate) return false;
+        if (challengeStart && rideDate < challengeStart) return false;
+        if (challengeEnd && rideDate > challengeEnd) return false;
+
+        return true;
+      });
+    }
+
+    function calculateChallengeTotals(activities) {
+      const rideCount = activities.length;
+      const distance = sum(activities, "distance_value");
+      const elevation = sum(activities, "elevation_gain_value");
+      const calories = activities.reduce((t, r) => t + (Number(r.calories) || 0), 0);
+      const durationSeconds = activities.reduce((t, r) => t + (Number(r.duration_seconds) || 0), 0);
+      const avgPace = average(activities, "average_pace_seconds");
+      const bestBenchmark = activities.length
+        ? Math.max(...activities.map(r => Number(r.activity_score) || 0))
+        : 0;
+
+      return {
+        rideCount,
+        distance,
+        elevation,
+        calories,
+        durationSeconds,
+        avgPace,
+        bestBenchmark,
+        distanceUnit: activities[0]?.distance_unit || "",
+        elevationUnit: activities[0]?.elevation_unit || "",
+        paceUnit: activities[0]?.pace_unit || ""
+      };
+    }
+
+    function scoreForMetric(totals, metric) {
+      if (metric === "distance") return totals.distance;
+      if (metric === "pace") return totals.avgPace > 0 ? 1 / totals.avgPace : 0;
+      if (metric === "elevation") return totals.elevation;
+      return totals.distance;
+    }
+
+    function renderChallengeChart() {
+      const ranked = getRankedMembers();
+      const metricInfo = challengeMetricInfo(selectedMetric, ranked);
+      const colors = chartMetricColors(selectedMetric);
+
+      document.getElementById("chartTitle").textContent =
+        `${metricInfo.label} ranking`;
+
+      document.getElementById("chartSubtitle").textContent =
+        `Showing ${metricInfo.label.toLowerCase()} for activities in this challenge period.`;
+
+      const labels = ranked.map(row => memberDisplayName(row.member));
+      const values = ranked.map(row => scoreForMetric(row.totals, selectedMetric));
+
+      const canvas = document.getElementById("challengeChart");
+      if (!canvas) return;
+
+      if (challengeChart) {
+        challengeChart.destroy();
+      }
+
+      challengeChart = new Chart(canvas, {
+        type: "bar",
+        data: {
+          labels,
+          datasets: [{
+            label: metricInfo.label,
+            data: values,
+            borderWidth: 0,
+            borderRadius: 8,
+            backgroundColor: colors.background,
+            hoverBackgroundColor: colors.hover
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          indexAxis: labels.length >= 6 ? "y" : "x",
+          plugins: {
+            legend: {
+              labels: {
+                color: "#9ca3af",
+                font: {
+                  size: 13,
+                  weight: "600"
+                },
+                boxWidth: 10,
+                boxHeight: 10
+              }
+            },
+            tooltip: {
+              backgroundColor: "rgba(13,22,16,0.92)",
+              titleColor: "#f0fdf4",
+              bodyColor: "#9ca3af",
+              borderColor: colors.background,
+              borderWidth: 1,
+              padding: 12,
+              cornerRadius: 10,
+              callbacks: {
+                label: ctx => `${metricInfo.label}: ${formatNumber(ctx.raw, metricInfo.decimals)} ${metricInfo.unit}`
+              }
+            }
+          },
+          scales: {
+            x: {
+              beginAtZero: true,
+              ticks: {
+                color: "#8a958f",
+                font: {
+                  size: 12
+                }
+              },
+              grid: {
+                color: "rgba(255,255,255,0.05)",
+                drawBorder: false
+              }
+            },
+            y: {
+              beginAtZero: true,
+              ticks: {
+                color: "#8a958f",
+                font: {
+                  size: 12
+                }
+              },
+              grid: {
+                color: "rgba(255,255,255,0.05)",
+                drawBorder: false
+              }
+            }
+          }
+        }
+      });
+    }
+
+    function renderRankings() {
+      const list = document.getElementById("rankingList");
+      const ranked = getRankedMembers();
+      const metricInfo = challengeMetricInfo(selectedMetric, ranked);
+
+      document.getElementById("rankingHelper").textContent =
+        `Ranked by ${metricInfo.label.toLowerCase()} using only activities inside the official challenge dates.`;
+
+      if (!ranked.length) {
+        list.innerHTML = `<div class="empty">No members found.</div>`;
+        return;
+      }
+
+      list.innerHTML = ranked.map((row, index) => {
+        const rank = index + 1;
+        const rankClass =
+          rank === 1 ? "gold" :
+          rank === 2 ? "silver" :
+          rank === 3 ? "bronze" :
+          "";
+
+        return `
+          <article class="ranking-card">
+            <div class="rank-number ${rankClass}">#${rank}</div>
+
+            <div>
+              <div class="rank-name">${escapeHtml(memberDisplayName(row.member))}</div>
+              <div class="rank-meta">
+                ${row.totals.rideCount} activity${row.totals.rideCount === 1 ? "" : "s"} •
+                ${formatNumber(row.totals.distance, 1)} ${escapeHtml(row.totals.distanceUnit)} •
+                ${formatDuration(row.totals.durationSeconds)}
+              </div>
+            </div>
+
+            <div class="rank-value">
+              ${formatChallengeValue(row.totals, selectedMetric)}
+            </div>
+          </article>
+        `;
+      }).join("");
+    }
+
+    function renderMembers() {
+      const list = document.getElementById("membersList");
+      const ranked = getRankedMembers();
+
+      if (!ranked.length) {
+        list.innerHTML = `<div class="empty">No members found.</div>`;
+        return;
+      }
+
+      list.innerHTML = ranked.map((row, index) => memberCardHTML(row, index + 1)).join("");
+    }
+
+    function memberCardHTML(row, rank) {
+      const member = row.member;
+      const totals = row.totals;
+      const activities = row.activities;
+      const isExpanded = expandedMembers.has(member.user_id);
+      const name = memberDisplayName(member);
+
+      return `
+        <article class="member-card">
+          <div class="member-top">
+            <div>
+              <div class="member-name">#${rank} ${escapeHtml(name)}</div>
+              <div class="member-meta">
+                ${escapeHtml(member.role || "member")} • ${activities.length} challenge activity${activities.length === 1 ? "" : "s"}
+              </div>
+            </div>
+
+            <button class="btn-ghost" onclick="toggleMember('${escapeHtml(member.user_id)}')">
+              ${isExpanded ? "Hide activities" : "View activities"}
+            </button>
+          </div>
+
+          <div class="member-stats">
+            <div class="mini-stat">
+              <div class="mini-label">Distance</div>
+              <div class="mini-value">${formatNumber(totals.distance, 1)} ${escapeHtml(totals.distanceUnit)}</div>
+            </div>
+
+            <div class="mini-stat">
+              <div class="mini-label">Average pace</div>
+              <div class="mini-value">${escapeHtml(formatPace(totals.avgPace, totals.paceUnit))}</div>
+            </div>
+
+            <div class="mini-stat">
+              <div class="mini-label">Elevation</div>
+              <div class="mini-value">${formatNumber(totals.elevation, 0)} ${escapeHtml(totals.elevationUnit)}</div>
+            </div>
+
+            <div class="mini-stat">
+              <div class="mini-label">Duration</div>
+              <div class="mini-value">${formatDuration(totals.durationSeconds)}</div>
+            </div>
+          </div>
+
+          ${
+            isExpanded
+              ? `<div class="activities-list">
+                  ${activities.length ? activities.map(activity => rideCardHTML(activity)).join("") : `<div class="empty">No activities in this challenge period.</div>`}
+                </div>`
+              : ""
+          }
+        </article>
+      `;
+    }
+
+    function rideCardHTML(activity) {
+      const date = formatDate(activity.activity_day || activity.activity_date);
+      const benchmark = safeNumber(activity.activity_score);
+      const distance = safeNumber(activity.distance_value);
+      const avgPace = safeNumber(activity.average_pace_seconds);
+      const elevation = safeNumber(activity.elevation_gain_value);
+      const calories = activity.calories ?? 0;
+      const duration = formatDuration(activity.duration_seconds || 0);
+
+      return `
+        <article class="activity-card">
+          <div>
+            <div class="activity-date">${escapeHtml(date)}</div>
+            <div class="activity-small">${escapeHtml(activityTypeLabel(activity.activity_type))} · ID: ${escapeHtml(shortId(activity.local_activity_id || activity.id))}</div>
+          </div>
+
+          <div>
+            <div class="metric-label">Activity Score</div>
+            <div class="metric-value green">${formatNumber(benchmark, 1)}%</div>
+          </div>
+
+          <div>
+            <div class="metric-label">Distance</div>
+            <div class="metric-value">${formatNumber(distance, 2)} ${escapeHtml(activity.distance_unit || "")}</div>
+          </div>
+
+          <div>
+            <div class="metric-label">Average pace</div>
+            <div class="metric-value">${escapeHtml(formatPace(avgPace, activity.pace_unit))}</div>
+          </div>
+
+          <div>
+            <div class="metric-label">Elevation</div>
+            <div class="metric-value">${formatNumber(elevation, 0)} ${escapeHtml(activity.elevation_unit || "")}</div>
+          </div>
+
+          <div>
+            <div class="metric-label">Calories</div>
+            <div class="metric-value">${escapeHtml(String(calories))} kcal</div>
+            <div class="activity-small">${escapeHtml(duration)}</div>
+          </div>
+        </article>
+      `;
+    }
+
+    function toggleMember(userId) {
+      if (expandedMembers.has(userId)) {
+        expandedMembers.delete(userId);
+      } else {
+        expandedMembers.add(userId);
+      }
+
+      renderMembers();
+    }
+
+    function challengeMetricInfo(metric, ranked = []) {
+      const firstWithRides = ranked.find(row => row.activities.length);
+      const totals = firstWithRides?.totals || {};
+
+      if (metric === "distance") {
+        return {
+          label: "Distance",
+          unit: totals.distanceUnit || "",
+          decimals: 1
+        };
+      }
+
+      if (metric === "pace") {
+        return {
+          label: "Average pace",
+          unit: totals.paceUnit || "min/km",
+          decimals: 0
+        };
+      }
+
+      if (metric === "elevation") {
+        return {
+          label: "Elevation",
+          unit: totals.elevationUnit || "",
+          decimals: 0
+        };
+      }
+
+      return {
+        label: "Distance",
+        unit: totals.distanceUnit || "",
+        decimals: 1
+      };
+    }
+
+    function formatChallengeValue(totals, metric) {
+      if (metric === "distance") {
+        return `${formatNumber(totals.distance, 1)} ${escapeHtml(totals.distanceUnit)}`;
+      }
+
+      if (metric === "pace") {
+        return escapeHtml(formatPace(totals.avgPace, totals.paceUnit));
+      }
+
+      if (metric === "elevation") {
+        return `${formatNumber(totals.elevation, 0)} ${escapeHtml(totals.elevationUnit)}`;
+      }
+
+      return `${formatNumber(totals.distance, 1)} ${escapeHtml(totals.distanceUnit)}`;
+    }
+
+    function challengePeriodText() {
+      if (challengeStart && challengeEnd) {
+        return `${formatDate(challengeStart)} → ${formatDate(challengeEnd)}`;
+      }
+
+      if (challengeStart) {
+        return `From ${formatDate(challengeStart)}`;
+      }
+
+      if (challengeEnd) {
+        return `Until ${formatDate(challengeEnd)}`;
+      }
+
+      return "All uploaded activities";
+    }
+
+    function chartMetricColors(metric) {
+      if (metric === "distance") {
+        return {
+          background: "rgba(59,130,246,0.62)",
+          hover: "rgba(96,165,250,0.86)"
+        };
+      }
+
+      if (metric === "pace") {
+        return {
+          background: "rgba(239,68,68,0.62)",
+          hover: "rgba(248,113,113,0.86)"
+        };
+      }
+
+      if (metric === "elevation") {
+        return {
+          background: "rgba(146,64,14,0.68)",
+          hover: "rgba(180,83,9,0.88)"
+        };
+      }
+
+      return {
+        background: "rgba(34,197,94,0.55)",
+        hover: "rgba(74,222,128,0.75)"
+      };
+    }
+
+    function renderError(message) {
+      document.getElementById("challengeTitle").textContent = "Could not load challenge";
+      document.getElementById("challengeDescription").textContent = message || "Unknown error.";
+
+      document.getElementById("rankingList").innerHTML =
+        `<div class="empty">${escapeHtml(message || "Could not load challenge.")}</div>`;
+
+      document.getElementById("membersList").innerHTML = "";
+    }
+
+    function showChallenge() {
+      loginSection.classList.add("hidden");
+      challengeSection.classList.remove("hidden");
+      signedInActions.classList.remove("hidden");
+      showLoginStatus("");
+    }
+
+    function showLogin() {
+      loginSection.classList.remove("hidden");
+      challengeSection.classList.add("hidden");
+      signedInActions.classList.add("hidden");
+      userDisplayName.textContent = "";
+      showLoginStatus("");
+    }
+
+    function goBack() {
+      window.location.href = "index.html";
+    }
+
+    function setLoginLoading(loading) {
+      const btn = document.getElementById("loginButton");
+      btn.disabled = loading;
+      btn.textContent = loading ? "Signing in…" : "Sign in";
+    }
+
+    function showLoginStatus(msg) {
+      loginStatus.textContent = msg || "";
+    }
+
+    function destroyChallengeChart() {
+      if (challengeChart) {
+        challengeChart.destroy();
+        challengeChart = null;
+      }
+    }
+
+    function groupTypeLabel(type) {
+      if (type === "club") return "Club";
+      if (type === "family") return "Family";
+      if (type === "challenge") return "Activity Challenge";
+      return "Group";
+    }
+
+    function memberDisplayName(member) {
+      return member.display_name || member.email || `Member ${shortId(member.user_id)}`;
+    }
+
+    function average(rows, key) {
+      if (!rows.length) return 0;
+      return rows.reduce((s, r) => s + (Number(r[key]) || 0), 0) / rows.length;
+    }
+
+    function sum(rows, key) {
+      return rows.reduce((t, r) => t + (Number(r[key]) || 0), 0);
+    }
+
+    function safeNumber(v) {
+      const n = Number(v);
+      return Number.isFinite(n) ? n : 0;
+    }
+
+    function formatNumber(v, d) {
+      return safeNumber(v).toLocaleString(undefined, {
+        minimumFractionDigits: d,
+        maximumFractionDigits: d
+      });
+    }
+
+    function formatDuration(totalSeconds) {
+      totalSeconds = Math.max(0, Number(totalSeconds) || 0);
+
+      const hours = Math.floor(totalSeconds / 3600);
+      const minutes = Math.floor((totalSeconds % 3600) / 60);
+      const seconds = Math.floor(totalSeconds % 60);
+
+      if (hours > 0) return `${hours}h ${String(minutes).padStart(2, "0")}m`;
+      return `${minutes}m ${String(seconds).padStart(2, "0")}s`;
+    }
+
+    function formatDate(value) {
+      if (!value) return "Unknown date";
+
+      const raw = String(value);
+      const datePart = raw.slice(0, 10);
+      const match = datePart.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+
+      if (match) {
+        const year = Number(match[1]);
+        const month = Number(match[2]) - 1;
+        const day = Number(match[3]);
+
+        const localDate = new Date(year, month, day);
+
+        return localDate.toLocaleDateString(undefined, {
+          year: "numeric",
+          month: "short",
+          day: "numeric"
+        });
+      }
+
+      const date = new Date(value);
+
+      if (Number.isNaN(date.getTime())) return value;
+
+      return date.toLocaleDateString(undefined, {
+        year: "numeric",
+        month: "short",
+        day: "numeric"
+      });
+    }
+
+    function formatPace(seconds, unit = "min/km") {
+      const value = Number(seconds);
+      if (!Number.isFinite(value) || value <= 0) return "—";
+      const rounded = Math.round(value);
+      const minutes = Math.floor(rounded / 60);
+      const remainingSeconds = String(rounded % 60).padStart(2, "0");
+      return `${minutes}:${remainingSeconds} ${unit || "min/km"}`;
+    }
+
+    function activityTypeLabel(type) {
+      return String(type || "run").toLowerCase() === "walk" ? "Walk" : "Run";
+    }
+
+    function shortId(id) {
+      if (!id) return "—";
+      return String(id).slice(0, 6);
+    }
+
+    function escapeHtml(value) {
+      return String(value ?? "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    checkSession();
+
+    client.auth.onAuthStateChange((_event, session) => {
+      if (session && session.user) {
+        currentUser = session.user;
+
+        showChallenge();
+        loadProfile(session.user).then(() => {
+          loadChallengeDashboard();
+        });
+      } else {
+        currentUser = null;
+        currentData = null;
+        expandedMembers.clear();
+        destroyChallengeChart();
+        showLogin();
+      }
+    });
+  </script>
+</body>
+</html>

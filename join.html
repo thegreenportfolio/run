@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <title>Join Run Green Group</title>
+  <meta name="description" content="Join a private Run Green group using an invite link." />
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --green: #22c55e;
+      --green-light: #16a34a;
+      --green-dim: #16a34a;
+      --text: #111111;
+      --muted: #6e6e73;
+      --border: #dfe7e2;
+      --border-soft: #e5e5ea;
+      --card: #ffffff;
+      --card-soft: #f8fff9;
+      --danger: #ef4444;
+      --page-gradient:
+        radial-gradient(circle at top left, #dcfce7 0, transparent 38%),
+        linear-gradient(180deg, #e8fbea 0%, #f5fff7 45%, #e8fbea 100%);
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --green: #44d965;
+        --green-light: #4ade80;
+        --green-dim: #16a34a;
+        --text: #f0fdf4;
+        --muted: #9ca3af;
+        --border: rgba(34,197,94,0.14);
+        --border-soft: rgba(255,255,255,0.08);
+        --card: #112918;
+        --card-soft: #0c2012;
+        --danger: #ef4444;
+        --page-gradient:
+          radial-gradient(circle at top left, rgba(74,222,128,0.18), transparent 34%),
+          radial-gradient(circle at bottom right, rgba(34,197,94,0.16), transparent 42%),
+          linear-gradient(180deg, #0a2414 0%, #10351f 48%, #092817 100%);
+      }
+    }
+
+    *, *::before, *::after {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--page-gradient);
+      color: var(--text);
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    header {
+      border-bottom: 1px solid var(--border);
+      background: rgba(255,255,255,0.72);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+    }
+
+    @media (prefers-color-scheme: dark) {
+      header {
+        background: rgba(8,31,17,0.84);
+      }
+    }
+
+    .header-inner {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 0 24px;
+      height: 68px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .logo {
+      width: 42px;
+      height: 42px;
+      border-radius: 12px;
+      overflow: hidden;
+      flex-shrink: 0;
+      border: 1px solid var(--border);
+      background: var(--card-soft);
+    }
+
+    .logo img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .brand h1 {
+      font-size: 17px;
+      font-weight: 700;
+      margin: 0;
+    }
+
+    .brand p {
+      font-size: 12px;
+      color: var(--muted);
+      margin: 2px 0 0;
+    }
+
+    main {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 44px 24px 80px;
+    }
+
+    .card {
+      max-width: 520px;
+      margin: 0 auto;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      padding: 34px;
+      box-shadow: 0 18px 60px rgba(0,0,0,0.10);
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--green-light);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-bottom: 14px;
+    }
+
+    .eyebrow::before {
+      content: '';
+      display: inline-block;
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--green);
+      box-shadow: 0 0 8px var(--green);
+    }
+
+    h2 {
+      font-size: 26px;
+      line-height: 1.15;
+      font-weight: 800;
+      margin: 0 0 8px;
+      letter-spacing: -0.5px;
+    }
+
+    .helper {
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.6;
+      margin: 0 0 24px;
+    }
+
+    .invite-box {
+      background: var(--card-soft);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 16px;
+      margin-bottom: 22px;
+    }
+
+    .invite-label {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 6px;
+    }
+
+    .invite-code {
+      font-size: 20px;
+      font-weight: 800;
+      color: var(--green-light);
+      letter-spacing: 0.08em;
+    }
+
+    .field {
+      margin-bottom: 16px;
+    }
+
+    label {
+      display: block;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      color: var(--muted);
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+
+    input {
+      width: 100%;
+      padding: 13px 16px;
+      border-radius: 12px;
+      border: 1px solid var(--border-soft);
+      background: var(--card-soft);
+      color: var(--text);
+      font-size: 15px;
+      font-family: inherit;
+      outline: none;
+    }
+
+    input:focus {
+      border-color: rgba(34,197,94,0.5);
+      box-shadow: 0 0 0 3px rgba(34,197,94,0.1);
+    }
+
+    button {
+      border: 0;
+      cursor: pointer;
+      font-family: inherit;
+      font-weight: 700;
+      font-size: 14px;
+      border-radius: 999px;
+      padding: 11px 18px;
+      transition: all 0.15s ease;
+      color: #fff;
+      width: 100%;
+    }
+
+    button:hover {
+      transform: translateY(-1px);
+    }
+
+    button:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .btn-primary {
+      background: var(--green-dim);
+      box-shadow: 0 0 0 1px rgba(34,197,94,0.4), 0 4px 16px rgba(34,197,94,0.18);
+    }
+
+    .btn-primary:hover {
+      background: var(--green);
+    }
+
+    .btn-ghost {
+      margin-top: 10px;
+      background: var(--card-soft);
+      color: var(--text);
+      border: 1px solid var(--border-soft);
+    }
+
+    .status {
+      margin-top: 16px;
+      font-size: 14px;
+      line-height: 1.5;
+      color: #fca5a5;
+      min-height: 22px;
+    }
+
+    .status.success {
+      color: var(--green-light);
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    @media (max-width: 520px) {
+      main {
+        padding: 28px 16px 60px;
+      }
+
+      .card {
+        padding: 26px 22px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <header>
+    <div class="header-inner">
+      <div class="logo">
+        <img src="assets/icon.png" alt="Run Green icon">
+      </div>
+
+      <div class="brand">
+        <h1>Run Green</h1>
+        <p>Private activity portal</p>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="card">
+      <div class="eyebrow">Group invite</div>
+      <h2>Join a private group</h2>
+      <p class="helper">
+        Sign in with your Run Green account to join this private group.
+      </p>
+
+      <div class="invite-box">
+        <div class="invite-label">Invite code</div>
+        <div id="inviteCodeDisplay" class="invite-code">—</div>
+      </div>
+
+      <div id="loginForm">
+        <div class="field">
+          <label for="email">Email</label>
+          <input id="email" type="email" autocomplete="email" placeholder="you@example.com" />
+        </div>
+
+        <div class="field">
+          <label for="password">Password</label>
+          <input id="password" type="password" autocomplete="current-password" placeholder="••••••••" />
+        </div>
+
+        <button id="loginButton" class="btn-primary" onclick="signInAndJoin()">Sign in and join group</button>
+      </div>
+
+      <div id="joinedActions" class="hidden">
+        <button id="joinButton" class="btn-primary" onclick="joinGroup()">Join group</button>
+        <button class="btn-ghost" onclick="goToDashboard()">Go to dashboard</button>
+      </div>
+
+      <div id="status" class="status"></div>
+    </section>
+  </main>
+
+  <script>
+    const SUPABASE_URL = "https://wstnsrizuhzezectivwf.supabase.co";
+    const SUPABASE_KEY = "sb_publishable_GE5PhqdYjJ3RCcXgkJxjeA_Ry9Oh-Oz";
+
+    const client = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    const params = new URLSearchParams(window.location.search);
+    const inviteCode = (params.get("code") || "").trim().toUpperCase();
+
+    const inviteCodeDisplay = document.getElementById("inviteCodeDisplay");
+    const statusBox = document.getElementById("status");
+    const loginForm = document.getElementById("loginForm");
+    const joinedActions = document.getElementById("joinedActions");
+    const loginButton = document.getElementById("loginButton");
+    const joinButton = document.getElementById("joinButton");
+
+    inviteCodeDisplay.textContent = inviteCode || "Missing code";
+
+    async function init() {
+      if (!inviteCode) {
+        showStatus("This invite link is missing a code.");
+        loginForm.classList.add("hidden");
+        joinedActions.classList.add("hidden");
+        return;
+      }
+
+      const { data } = await client.auth.getSession();
+
+      if (data.session && data.session.user) {
+        loginForm.classList.add("hidden");
+        joinedActions.classList.remove("hidden");
+        showStatus("You are signed in. Click Join group to accept the invite.", true);
+      }
+    }
+
+    async function signInAndJoin() {
+      const email = document.getElementById("email").value.trim();
+      const password = document.getElementById("password").value;
+
+      if (!email || !password) {
+        showStatus("Please enter your email and password.");
+        return;
+      }
+
+      setLoading(true);
+      showStatus("");
+
+      const { error } = await client.auth.signInWithPassword({
+        email,
+        password
+      });
+
+      if (error) {
+        setLoading(false);
+        showStatus(error.message);
+        return;
+      }
+
+      await joinGroup();
+    }
+
+    async function joinGroup() {
+      if (!inviteCode) {
+        showStatus("This invite link is missing a code.");
+        return;
+      }
+
+      if (joinButton) joinButton.disabled = true;
+      showStatus("Joining group...");
+
+      const { data, error } = await client.rpc("join_run_group_with_code", {
+        p_invite_code: inviteCode
+      });
+
+      if (error) {
+        setLoading(false);
+        if (joinButton) joinButton.disabled = false;
+        showStatus(error.message);
+        return;
+      }
+
+      const group = Array.isArray(data) ? data[0] : null;
+      const groupName = group?.group_name || "the group";
+
+      loginForm.classList.add("hidden");
+      joinedActions.classList.remove("hidden");
+
+      showStatus(`Success. You joined ${groupName}.`, true);
+
+      setTimeout(() => {
+        goToDashboard();
+      }, 1800);
+    }
+
+    function goToDashboard() {
+      window.location.href = "https://run.thegreenportfolio.ca/";
+    }
+
+    function setLoading(loading) {
+      loginButton.disabled = loading;
+      loginButton.textContent = loading ? "Signing in..." : "Sign in and join group";
+    }
+
+    function showStatus(message, success = false) {
+      statusBox.textContent = message || "";
+
+      if (success) {
+        statusBox.classList.add("success");
+      } else {
+        statusBox.classList.remove("success");
+      }
+    }
+
+    init();
+  </script>
+</body>
+</html>
