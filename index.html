@@ -468,13 +468,22 @@
     .stat-value.accent {
       color: var(--green-light);
     }
+    
+    .activity-filter-row {
+  margin: 20px 0 10px;
+}
 
-    .controls {
-      display: grid;
-      grid-template-columns: 1fr 160px 160px;
-      gap: 10px;
-      margin: 20px 0;
-    }
+.activity-filter-row select {
+  width: 220px;
+  max-width: 100%;
+}
+
+   .controls {
+  display: grid;
+  grid-template-columns: 1fr 160px 160px;
+  gap: 10px;
+  margin: 0 0 20px;
+}
 
     .search-wrap {
       position: relative;
@@ -855,39 +864,44 @@
   gap: 14px;
 }
 
+
 @media (max-width: 700px) {
   .form-row.two-cols {
     grid-template-columns: 1fr;
   }
 }
-    @media (max-width: 900px) {
-      .stat-grid {
-        grid-template-columns: repeat(3, 1fr);
-      }
+   @media (max-width: 900px) {
+  .stat-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
 
-      .controls {
-        grid-template-columns: 1fr;
-      }
+  .controls {
+    grid-template-columns: 1fr;
+  }
 
-      .activity-card {
-        grid-template-columns: 1fr 1fr;
-      }
+  .activity-filter-row select {
+    width: 100%;
+  }
 
-      .header-inner {
-        flex-wrap: wrap;
-        height: auto;
-        padding: 14px 20px;
-      }
+  .activity-card {
+    grid-template-columns: 1fr 1fr;
+  }
 
-      .top-actions {
-        width: 100%;
-      }
+  .header-inner {
+    flex-wrap: wrap;
+    height: auto;
+    padding: 14px 20px;
+  }
 
-      .group-card {
-        align-items: flex-start;
-        flex-direction: column;
-      }
-    }
+  .top-actions {
+    width: 100%;
+  }
+
+  .group-card {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
 
     @media (max-width: 700px) {
       .chart-header {
@@ -1103,39 +1117,54 @@
 
         <hr class="section-divider" />
 
-        <div class="controls">
-          <select id="activityTypeFilter" onchange="selectedChartDate = ''; renderRides()">
-            <option value="">Run &amp; Walk</option>
-            <option value="run">Runs</option>
-            <option value="walk">Walks</option>
-          </select>
+        <div class="activity-filter-row">
+  <select
+    id="activityTypeFilter"
+    onchange="selectedChartDate = ''; renderRides()"
+  >
+    <option value="">Run &amp; Walk</option>
+    <option value="run">Runs</option>
+    <option value="walk">Walks</option>
+  </select>
+</div>
 
-          <div class="search-wrap">
-            <span class="search-icon">🔍</span>
-            <input id="searchInput" type="search" placeholder="Search by date…" oninput="selectedChartDate = ''; renderRides()" />
-          </div>
+<div class="controls">
+  <div class="search-wrap">
+    <span class="search-icon">🔍</span>
+    <input
+      id="searchInput"
+      type="search"
+      placeholder="Search by date…"
+      oninput="selectedChartDate = ''; renderRides()"
+    />
+  </div>
 
-          <select id="yearFilter" onchange="selectedChartDate = ''; expandedMonths.clear(); expandedYears.clear(); renderRides()">
-            <option value="">All years</option>
-          </select>
+  <select
+    id="yearFilter"
+    onchange="selectedChartDate = ''; expandedMonths.clear(); expandedYears.clear(); renderRides()"
+  >
+    <option value="">All years</option>
+  </select>
 
-          <select id="monthFilter" onchange="selectedChartDate = ''; expandedMonths.clear(); expandedYears.clear(); renderRides()">
-            <option value="">All months</option>
-            <option value="01">January</option>
-            <option value="02">February</option>
-            <option value="03">March</option>
-            <option value="04">April</option>
-            <option value="05">May</option>
-            <option value="06">June</option>
-            <option value="07">July</option>
-            <option value="08">August</option>
-            <option value="09">September</option>
-            <option value="10">October</option>
-            <option value="11">November</option>
-            <option value="12">December</option>
-          </select>
-        </div>
-
+  <select
+    id="monthFilter"
+    onchange="selectedChartDate = ''; expandedMonths.clear(); expandedYears.clear(); renderRides()"
+  >
+    <option value="">All months</option>
+    <option value="01">January</option>
+    <option value="02">February</option>
+    <option value="03">March</option>
+    <option value="04">April</option>
+    <option value="05">May</option>
+    <option value="06">June</option>
+    <option value="07">July</option>
+    <option value="08">August</option>
+    <option value="09">September</option>
+    <option value="10">October</option>
+    <option value="11">November</option>
+    <option value="12">December</option>
+  </select>
+</div>
         <div class="chart-card">
           <div class="chart-header">
             <div>
@@ -1479,16 +1508,15 @@ function toggleChallengeDateFields() {
 
       const inviteCode = generateInviteCode();
 
-      const { data, error } = await client
-        .from("run_group_invites")
-        .insert({
-          group_id: groupId,
-          invite_code: inviteCode,
-          created_by: currentUser.id,
-          is_active: true
-        })
-        .select("*")
-        .single();
+   const { data, error } = await client
+  .from("run_group_invites")
+  .insert({
+    group_id: groupId,
+    invite_code: inviteCode,
+    created_by: currentUser.id
+  })
+  .select("*")
+  .single();
 
       if (error) {
         alert(error.message);
