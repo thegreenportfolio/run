@@ -956,9 +956,10 @@ renderChallenge();
       document.getElementById("challengeTitle").textContent = title;
 
       const typeLabel = groupTypeLabel(group.group_type);
-      const description = group.description
-        ? `${typeLabel} • ${group.description}`
-        : `${typeLabel} • Private Run Green challenge`;
+      const activityLabel = activityTypeLabel(group.activity_type);
+   const description = group.description
+  ? `${typeLabel} • ${activityLabel} • ${group.description}`
+  : `${typeLabel} • ${activityLabel} • Private Run Green challenge`;
 
       document.getElementById("challengeDescription").textContent = description;
       document.getElementById("challengePeriod").textContent = challengePeriodText();
@@ -1023,17 +1024,27 @@ async function copyChallengeLink() {
     }
 
     function filterChallengeRides(activities) {
-      return activities.filter(activity => {
-        const rideDate = String(activity.activity_day || activity.activity_date || "").slice(0, 10);
+  const requiredType = String(
+    currentData?.group?.activity_type || "run"
+  ).toLowerCase();
 
-        if (!rideDate) return false;
-        if (challengeStart && rideDate < challengeStart) return false;
-        if (challengeEnd && rideDate > challengeEnd) return false;
+  return activities.filter(activity => {
+    const activityType = String(
+      activity.activity_type || "run"
+    ).toLowerCase();
 
-        return true;
-      });
-    }
+    const activityDate = String(
+      activity.activity_day || activity.activity_date || ""
+    ).slice(0, 10);
 
+    if (activityType !== requiredType) return false;
+    if (!activityDate) return false;
+    if (challengeStart && activityDate < challengeStart) return false;
+    if (challengeEnd && activityDate > challengeEnd) return false;
+
+    return true;
+  });
+}
     function calculateChallengeTotals(activities) {
       const rideCount = activities.length;
       const distance = sum(activities, "distance_value");
@@ -1065,7 +1076,14 @@ async function copyChallengeLink() {
       if (metric === "elevation") return totals.elevation;
       return totals.distance;
     }
+    
+function chartValueForMetric(totals, metric) {
+  if (metric === "distance") return totals.distance;
+  if (metric === "pace") return totals.avgPace;
+  if (metric === "elevation") return totals.elevation;
 
+  return totals.distance;
+}
     function renderChallengeChart() {
       const ranked = getRankedMembers();
       const metricInfo = challengeMetricInfo(selectedMetric, ranked);
@@ -1078,7 +1096,9 @@ async function copyChallengeLink() {
         `Showing ${metricInfo.label.toLowerCase()} for activities in this challenge period.`;
 
       const labels = ranked.map(row => memberDisplayName(row.member));
-      const values = ranked.map(row => scoreForMetric(row.totals, selectedMetric));
+      const values = ranked.map(row =>
+  chartValueForMetric(row.totals, selectedMetric)
+);
 
       const canvas = document.getElementById("challengeChart");
       if (!canvas) return;
@@ -1125,7 +1145,19 @@ async function copyChallengeLink() {
               padding: 12,
               cornerRadius: 10,
               callbacks: {
-                label: ctx => `${metricInfo.label}: ${formatNumber(ctx.raw, metricInfo.decimals)} ${metricInfo.unit}`
+                label: ctx => {
+  if (selectedMetric === "pace") {
+    return `${metricInfo.label}: ${formatPace(
+      ctx.raw,
+      metricInfo.unit
+    )}`;
+  }
+
+  return `${metricInfo.label}: ${formatNumber(
+    ctx.raw,
+    metricInfo.decimals
+  )} ${metricInfo.unit}`;
+}
               }
             }
           },
