@@ -964,14 +964,84 @@
         return;
       }
 
-      currentData = data;
+     currentData = filterDashboardByActivityType(data);
 
-      renderClubHeader();
-      renderClubTotals();
-      renderMembers();
-      renderOpenMemberCharts();
+renderClubHeader();
+renderClubTotals();
+renderMembers();
+renderOpenMemberCharts();
     }
+    
+function filterDashboardByActivityType(data) {
+  const dashboard = data || {};
+  const group = dashboard.group || {};
+  const requiredType = String(group.activity_type || "run").toLowerCase();
 
+  const members = (dashboard.members || []).map(member => {
+    const activities = (member.activities || []).filter(activity => {
+      return String(activity.activity_type || "run").toLowerCase() === requiredType;
+    });
+
+    return {
+      ...member,
+      activities,
+      totals: calculateActivityTotals(activities)
+    };
+  });
+
+  const allActivities = members.flatMap(member => member.activities);
+
+  return {
+    ...dashboard,
+    members,
+    totals: calculateActivityTotals(allActivities)
+  };
+}
+
+function calculateActivityTotals(activities) {
+  const rows = activities || [];
+
+  const distance = sum(rows, "distance_value");
+  const elevation = sum(rows, "elevation_gain_value");
+  const calories = rows.reduce(
+    (total, activity) => total + (Number(activity.calories) || 0),
+    0
+  );
+
+  const durationSeconds = rows.reduce(
+    (total, activity) =>
+      total + (Number(activity.duration_seconds) || 0),
+    0
+  );
+
+  const validPaces = rows
+    .map(activity => Number(activity.average_pace_seconds))
+    .filter(value => Number.isFinite(value) && value > 0);
+
+  const averagePace = validPaces.length
+    ? validPaces.reduce((total, value) => total + value, 0) /
+      validPaces.length
+    : 0;
+
+  const bestBenchmark = rows.reduce(
+    (best, activity) =>
+      Math.max(best, Number(activity.activity_score) || 0),
+    0
+  );
+
+  return {
+  ride_count: rows.length,
+  distance,
+  calories,
+  elevation,
+  duration_seconds: durationSeconds,
+  avg_pace_seconds: averagePace,
+  best_benchmark: bestBenchmark,
+  distance_unit: rows[0]?.distance_unit || "",
+  elevation_unit: rows[0]?.elevation_unit || "",
+  pace_unit: rows[0]?.pace_unit || ""
+};
+}
     function renderClubHeader() {
       const group = currentData.group || {};
 
@@ -979,11 +1049,12 @@
         group.name || "Club dashboard";
 
       const typeLabel = groupTypeLabel(group.group_type);
-
+    const activityLabel = activityTypeLabel(group.activity_type);
+    
       document.getElementById("clubDescription").textContent =
         group.description
-          ? `${typeLabel} • ${group.description}`
-          : `${typeLabel} • Private Run Green group`;
+  ? `${typeLabel} • ${activityLabel} • ${group.description}`
+  : `${typeLabel} • ${activityLabel} • Private Run Green group`;
     }
 
     function renderClubTotals() {
@@ -1430,7 +1501,19 @@
               padding: 12,
               cornerRadius: 10,
               callbacks: {
-                label: ctx => `${metricInfo.label}: ${formatNumber(ctx.raw, metricInfo.decimals)} ${metricInfo.unit}`
+                label: ctx => {
+    if (metric === "pace") {
+        return `${metricInfo.label}: ${formatPace(
+            ctx.raw,
+            metricInfo.unit
+        )}`;
+    }
+
+    return `${metricInfo.label}: ${formatNumber(
+        ctx.raw,
+        metricInfo.decimals
+    )} ${metricInfo.unit}`;
+}
               }
             }
           },
@@ -1454,7 +1537,13 @@
                 font: {
                   size: 12
                 },
-                callback: v => `${v}${metricInfo.shortUnit}`
+                callback: v => {
+  if (metric === "pace") {
+    return formatPace(v, metricInfo.unit);
+  }
+
+  return `${v}${metricInfo.shortUnit}`;
+}
               },
               grid: {
                 color: "rgba(255,255,255,0.05)",
