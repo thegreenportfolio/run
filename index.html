@@ -1042,6 +1042,14 @@
     <option value="family">Family</option>
   </select>
 </div>
+<div class="field">
+  <label for="groupActivityTypeInput">Activity type</label>
+
+  <select id="groupActivityTypeInput">
+    <option value="run">Running</option>
+    <option value="walk">Walking</option>
+  </select>
+</div>
 
 <div id="challengeDateRow" class="form-row two-cols hidden">
   <div class="field">
@@ -1397,12 +1405,14 @@
   const groupStatus = document.getElementById("groupStatus");
   const nameInput = document.getElementById("groupNameInput");
   const typeInput = document.getElementById("groupTypeInput");
+  const activityTypeInput = document.getElementById("groupActivityTypeInput");
   const startDateInput = document.getElementById("groupStartDateInput");
   const endDateInput = document.getElementById("groupEndDateInput");
   const descriptionInput = document.getElementById("groupDescriptionInput");
 
   const name = nameInput.value.trim();
   const groupType = typeInput.value;
+  const activityType = activityTypeInput.value;
   const startDate = startDateInput.value;
   const endDate = endDateInput.value;
   const description = descriptionInput.value.trim();
@@ -1430,10 +1440,11 @@
 
   const { data: group, error: groupError } = await client
     .from("run_groups")
-    .insert({
+   .insert({
   owner_id: currentUser.id,
   name,
   group_type: groupType,
+  activity_type: activityType,
   description: description || null,
   start_date: groupType === "challenge" ? startDate : null,
   end_date: groupType === "challenge" ? endDate : null
@@ -1463,6 +1474,7 @@
 
   nameInput.value = "";
 typeInput.value = "club";
+activityTypeInput.value = "run";
 startDateInput.value = "";
 endDateInput.value = "";
 descriptionInput.value = "";
@@ -1555,8 +1567,9 @@ function toggleChallengeDateFields() {
   allGroups = (data || []).map(group => ({
   id: group.group_id,
   name: group.group_name,
-  group_type: group.group_type,
-  description: group.group_description,
+group_type: group.group_type,
+activity_type: group.activity_type,
+description: group.group_description,
   start_date: group.start_date,
   end_date: group.end_date,
   created_at: group.group_created_at,
@@ -1595,7 +1608,9 @@ function toggleChallengeDateFields() {
           <div class="group-title">${escapeHtml(group.name)}</div>
 
           <div class="group-meta">
-            ${escapeHtml(groupTypeLabel(group.group_type))} • ${escapeHtml(role)}
+            ${escapeHtml(groupTypeLabel(group.group_type))}
+• ${escapeHtml(activityTypeLabel(group.activity_type))}
+• ${escapeHtml(role)}
           </div>
 
           ${
@@ -2162,7 +2177,19 @@ ridesList.innerHTML = visibleRides.map(activity => rideCardHTML(activity)).join(
               padding: 12,
               cornerRadius: 10,
               callbacks: {
-                label: ctx => `${metricInfo.label}: ${formatNumber(ctx.raw, metricInfo.decimals)} ${metricInfo.unit}`
+                label: ctx => {
+  if (metric === "pace") {
+    return `${metricInfo.label}: ${formatPace(
+      ctx.raw,
+      metricInfo.unit
+    )}`;
+  }
+
+  return `${metricInfo.label}: ${formatNumber(
+    ctx.raw,
+    metricInfo.decimals
+  )} ${metricInfo.unit}`;
+}
               }
             }
           },
@@ -2186,7 +2213,13 @@ ridesList.innerHTML = visibleRides.map(activity => rideCardHTML(activity)).join(
                 font: {
                   size: 12
                 },
-                callback: v => `${v}${metricInfo.shortUnit}`
+                callback: v => {
+  if (metric === "pace") {
+    return formatPace(v, metricInfo.unit);
+  }
+
+  return `${v}${metricInfo.shortUnit}`;
+}
               },
               grid: {
                 color: "rgba(255,255,255,0.05)",
