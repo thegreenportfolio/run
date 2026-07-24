@@ -1243,13 +1243,15 @@
 
       const session = data.session;
 
-      if (session && session.user) {
-        currentUser = session.user;
-        await showDashboard(session.user);
-        await refreshDashboard();
-      } else {
-        showLogin();
-      }
+     if (session && session.user) {
+  currentUser = session.user;
+
+  await ensureProfileEmail(session.user);
+  await showDashboard(session.user);
+  await refreshDashboard();
+} else {
+  showLogin();
+}
     }
 
     async function signIn() {
@@ -1276,9 +1278,11 @@
         return;
       }
 
-      currentUser = data.user;
-      await showDashboard(data.user);
-      await refreshDashboard();
+     currentUser = data.user;
+
+await ensureProfileEmail(data.user);
+await showDashboard(data.user);
+await refreshDashboard();
     }
 
     async function signOut() {
@@ -2550,39 +2554,90 @@ function formatChartMonth(value) {
       if (!id) return "—";
       return String(id).slice(0, 6);
     }
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
 
-    function escapeHtml(value) {
-      return String(value ?? "")
-        .replaceAll("&", "&amp;")
-        .replaceAll("<", "&lt;")
-        .replaceAll(">", "&gt;")
-        .replaceAll('"', "&quot;")
-        .replaceAll("'", "&#039;");
+async function ensureProfileEmail(user) {
+  if (!user?.id || !user?.email) return;
+
+  const { data: existingProfile, error: loadError } = await client
+    .from("profiles")
+    .select("id, email")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  if (loadError) {
+    console.error(
+      "Could not check profile email:",
+      loadError.message
+    );
+    return;
+  }
+
+  if (existingProfile) {
+    const { error: updateError } = await client
+      .from("profiles")
+      .update({
+        email: user.email
+      })
+      .eq("id", user.id);
+
+    if (updateError) {
+      console.error(
+        "Could not update profile email:",
+        updateError.message
+      );
     }
 
-    checkSession();
+    return;
+  }
 
-    client.auth.onAuthStateChange((_event, session) => {
-      if (session && session.user) {
-        currentUser = session.user;
-
-        showDashboard(session.user).then(async () => {
-          await refreshDashboard();
-        });
-      } else {
-        currentUser = null;
-        currentProfile = null;
-        allRides = [];
-        allGroups = [];
-
-        if (rideChart) {
-          rideChart.destroy();
-          rideChart = null;
-        }
-
-        showLogin();
-      }
+  const { error: insertError } = await client
+    .from("profiles")
+    .insert({
+      id: user.id,
+      email: user.email,
+      display_name: null
     });
+
+  if (insertError) {
+    console.error(
+      "Could not create profile:",
+      insertError.message
+    );
+  }
+}
+
+checkSession();
+
+client.auth.onAuthStateChange((_event, session) => {
+  if (session && session.user) {
+    currentUser = session.user;
+
+    ensureProfileEmail(session.user).then(async () => {
+      await showDashboard(session.user);
+      await refreshDashboard();
+    });
+  } else {
+    currentUser = null;
+    currentProfile = null;
+    allRides = [];
+    allGroups = [];
+
+    if (rideChart) {
+      rideChart.destroy();
+      rideChart = null;
+    }
+
+    showLogin();
+  }
+});
   </script>
 </body>
 </html>
