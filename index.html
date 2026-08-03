@@ -1107,7 +1107,7 @@
           </div>
 
           <div class="stat">
-            <div class="stat-label">Best benchmark</div>
+            <div class="stat-label">Average score</div>
             <div id="statBenchmark" class="stat-value accent">0%</div>
           </div>
         </div>
@@ -2034,7 +2034,7 @@ ridesList.innerHTML = visibleRides.map(activity => rideCardHTML(activity)).join(
       const calories = activities.reduce((t, r) => t + (Number(r.calories) || 0), 0);
       const elevation = sum(activities, "elevation_gain_value");
       const durationSeconds = activities.reduce((t, r) => t + (Number(r.duration_seconds) || 0), 0);
-      const bestBenchmark = activities.reduce((b, r) => Math.max(b, Number(r.activity_score) || 0), 0);
+      const averageScore = average(activities, "activity_score");
       const distanceUnit = activities[0]?.distance_unit || "";
       const elevationUnit = activities[0]?.elevation_unit || "";
 
@@ -2043,7 +2043,7 @@ ridesList.innerHTML = visibleRides.map(activity => rideCardHTML(activity)).join(
       document.getElementById("statCalories").textContent = `${Math.round(calories)} kcal`;
       document.getElementById("statElevation").textContent = `${formatNumber(elevation, 0)} ${elevationUnit}`;
       document.getElementById("statDuration").textContent = formatDuration(durationSeconds);
-      document.getElementById("statBenchmark").textContent = `${formatNumber(bestBenchmark, 1)}%`;
+      document.getElementById("statBenchmark").textContent = `${formatNumber(averageScore, 1)}%`;
     }
 
     function chartMetricColors(metric) {
