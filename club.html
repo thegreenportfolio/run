@@ -817,7 +817,7 @@
           </div>
 
           <div class="stat">
-            <div class="stat-label">Best benchmark</div>
+            <div class="stat-label">Average score</div>
             <div id="clubBenchmark" class="stat-value accent">0%</div>
           </div>
         </div>
@@ -1023,11 +1023,7 @@ function calculateActivityTotals(activities) {
       validPaces.length
     : 0;
 
-  const bestBenchmark = rows.reduce(
-    (best, activity) =>
-      Math.max(best, Number(activity.activity_score) || 0),
-    0
-  );
+  const averageScore = average(rows, "activity_score");
 
   return {
   ride_count: rows.length,
@@ -1036,7 +1032,7 @@ function calculateActivityTotals(activities) {
   elevation,
   duration_seconds: durationSeconds,
   avg_pace_seconds: averagePace,
-  best_benchmark: bestBenchmark,
+  average_score: averageScore,
   distance_unit: rows[0]?.distance_unit || "",
   elevation_unit: rows[0]?.elevation_unit || "",
   pace_unit: rows[0]?.pace_unit || ""
@@ -1076,7 +1072,7 @@ function calculateActivityTotals(activities) {
         formatDuration(totals.duration_seconds || 0);
 
       document.getElementById("clubBenchmark").textContent =
-        `${formatNumber(totals.best_benchmark, 1)}%`;
+        `${formatNumber(totals.average_score, 1)}%`;
     }
 
     function renderMembers() {
@@ -1141,8 +1137,8 @@ function calculateActivityTotals(activities) {
             </div>
 
             <div class="mini-stat">
-              <div class="mini-label">Best benchmark</div>
-              <div class="mini-value">${formatNumber(totals.best_benchmark, 1)}%</div>
+              <div class="mini-label">Average score</div>
+              <div class="mini-value">${formatNumber(totals.average_score, 1)}%</div>
             </div>
           </div>
 
