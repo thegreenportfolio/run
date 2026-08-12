@@ -45,7 +45,7 @@
     .stat-label { color:var(--muted); font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; }
     .stat-value { margin-top:9px; font-size:22px; font-weight:800; }
     .accent,.burned-value { color:var(--green); }
-    .eaten-value { color:#f97316; }
+    .eaten-value { color:#0a84ff; }
     .over-limit { color:var(--danger) !important; }
     .section { margin-top:26px; padding-top:24px; border-top:1px solid var(--border); }
     .section-head { display:flex; align-items:flex-end; justify-content:space-between; gap:14px; margin-bottom:16px; }
@@ -228,7 +228,7 @@
       const selected = eligible.length ? eligible[eligible.length - 1] : ordered[0];
       return Number(selected.calories) || 0;
     }
-    function renderChart(daily) { if (nutritionChart) nutritionChart.destroy(); nutritionChart = new Chart(document.getElementById("nutritionChart"), { type:"bar", data:{ labels:daily.map(day => shortDate(day.date)), datasets:[{ label:"Eaten", data:daily.map(day => day.eaten), backgroundColor:daily.map(day => activeGoal(day.date) && day.eaten > activeGoal(day.date) ? "rgba(239,68,68,.72)" : "rgba(249,115,22,.68)"), borderRadius:5 },{ label:"Burned", data:daily.map(day => day.burned), backgroundColor:"rgba(34,197,94,.68)", borderRadius:5 }] }, options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{ labels:{ color:"#8a958f" } } }, scales:{ x:{ stacked:false, ticks:{ color:"#8a958f", maxRotation:0, autoSkip:true }, grid:{ display:false } }, y:{ beginAtZero:true, ticks:{ color:"#8a958f", callback:value => `${value} kcal` }, grid:{ color:"rgba(128,128,128,.12)" } } } } }); }
+    function renderChart(daily) { if (nutritionChart) nutritionChart.destroy(); nutritionChart = new Chart(document.getElementById("nutritionChart"), { type:"bar", data:{ labels:daily.map(day => shortDate(day.date)), datasets:[{ label:"Eaten", data:daily.map(day => day.eaten), backgroundColor:daily.map(day => activeGoal(day.date) && day.eaten > activeGoal(day.date) ? "rgba(239,68,68,.72)" : "rgba(10,132,255,.72)"), borderRadius:5 },{ label:"Eaten above goal", data:daily.map(() => null), backgroundColor:"rgba(239,68,68,.72)", borderRadius:5 },{ label:"Burned", data:daily.map(day => day.burned), backgroundColor:"rgba(34,197,94,.68)", borderRadius:5 }] }, options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{ labels:{ color:"#8a958f" } } }, scales:{ x:{ stacked:false, ticks:{ color:"#8a958f", maxRotation:0, autoSkip:true }, grid:{ display:false } }, y:{ beginAtZero:true, ticks:{ color:"#8a958f", callback:value => `${value} kcal` }, grid:{ color:"rgba(128,128,128,.12)" } } } } }); }
 
     function weightYears() {
       const years = [...new Set(weights.map(row => Number(dateKey(row.recorded_at).slice(0,4))).filter(Boolean))].sort((a,b) => a-b);
