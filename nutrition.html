@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Nutrition — Run Green</title>
+  <meta name="description" content="Private Run Green and Bike Ride Green nutrition dashboard." />
+  <meta name="theme-color" content="#16a34a" />
+  <link rel="icon" type="image/png" href="./assets/icon.png" />
+  <link rel="apple-touch-icon" href="./assets/icon.png" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    :root { --green:#16a34a; --green-bright:#22c55e; --bg:#eef8f1; --card:#fff; --surface:#f8fff9; --border:#dfe7e2; --text:#111; --muted:#6e6e73; --danger:#ef4444; }
+    @media (prefers-color-scheme:dark) { :root { --green:#4ade80; --green-bright:#44d965; --bg:#071b10; --card:#112918; --surface:#102f1d; --border:rgba(255,255,255,.08); --text:#f0fdf4; --muted:#9ca3af; } }
+    * { box-sizing:border-box; }
+    body { margin:0; min-height:100vh; font-family:Inter,-apple-system,BlinkMacSystemFont,sans-serif; color:var(--text); background:radial-gradient(circle at top left,rgba(74,222,128,.18),transparent 35%),linear-gradient(180deg,var(--bg),#f5fff7 55%,var(--bg)); }
+    @media (prefers-color-scheme:dark) { body { background:radial-gradient(circle at top left,rgba(74,222,128,.16),transparent 35%),linear-gradient(180deg,#071b10,#10351f 55%,#092817); } }
+    header { position:sticky; top:0; z-index:10; border-bottom:1px solid var(--border); background:color-mix(in srgb,var(--card) 82%,transparent); backdrop-filter:blur(18px); }
+    .header-inner { max-width:1120px; min-height:68px; margin:auto; padding:12px 24px; display:flex; align-items:center; justify-content:space-between; gap:16px; }
+    .brand { display:flex; align-items:center; gap:12px; }
+    .logo { width:42px; height:42px; border-radius:12px; object-fit:cover; }
+    h1 { margin:0; font-size:17px; }
+    .subtitle,.muted { color:var(--muted); font-size:13px; }
+    .actions { display:flex; gap:8px; flex-wrap:wrap; }
+    button,.button { border:1px solid var(--border); border-radius:999px; padding:9px 17px; color:var(--text); background:transparent; font:600 14px Inter,sans-serif; cursor:pointer; text-decoration:none; }
+    .primary { color:#fff; background:#16a34a; border-color:#16a34a; }
+    .danger { color:#fca5a5; border-color:rgba(239,68,68,.25); }
+    main { max-width:1120px; margin:auto; padding:36px 24px 80px; }
+    .card { padding:28px; border:1px solid var(--border); border-radius:24px; background:var(--card); box-shadow:0 18px 60px rgba(0,0,0,.1); }
+    .hidden { display:none !important; }
+    .login { max-width:440px; margin:10vh auto; }
+    h2 { margin:0 0 6px; font-size:28px; letter-spacing:-.5px; }
+    h3 { margin:0; font-size:17px; }
+    .field { margin:16px 0; }
+    label { display:block; margin-bottom:7px; color:var(--muted); font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:.05em; }
+    input,select { width:100%; padding:13px 15px; border:1px solid var(--border); border-radius:12px; color:var(--text); background:var(--surface); font:15px Inter,sans-serif; }
+    .status { min-height:20px; margin-top:14px; color:#fca5a5; font-size:14px; }
+    .today-grid,.stats-grid { display:grid; grid-template-columns:repeat(5,1fr); gap:12px; margin:24px 0; }
+    .stats-grid { grid-template-columns:repeat(4,1fr); }
+    .stat { padding:18px 16px; border:1px solid var(--border); border-radius:16px; background:var(--surface); }
+    .stat-label { color:var(--muted); font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; }
+    .stat-value { margin-top:9px; font-size:22px; font-weight:800; }
+    .accent,.burned-value { color:var(--green); }
+    .eaten-value { color:#f97316; }
+    .over-limit { color:var(--danger) !important; }
+    .section { margin-top:26px; padding-top:24px; border-top:1px solid var(--border); }
+    .section-head { display:flex; align-items:flex-end; justify-content:space-between; gap:14px; margin-bottom:16px; }
+    .section-head select { width:150px; }
+    .chart-wrap { height:290px; padding:18px; border:1px solid var(--border); border-radius:18px; background:var(--surface); }
+    .weight-head { align-items:center; }
+    .weight-controls { display:flex; align-items:center; gap:9px; }
+    .weight-controls button { min-width:42px; padding:8px 12px; }
+    .weight-controls button:disabled { opacity:.35; cursor:not-allowed; }
+    .weight-year { min-width:64px; text-align:center; font-weight:800; }
+    .weight-summary { display:grid; grid-template-columns:minmax(190px,260px) 1fr; gap:12px; margin-bottom:12px; }
+    .weight-chart-wrap { height:320px; }
+    .daily-list { display:grid; gap:10px; }
+    .history-year,.history-month { border:1px solid var(--border); border-radius:18px; background:var(--surface); overflow:hidden; }
+    .history-month { border-radius:15px; background:var(--card); }
+    .history-year + .history-year,.history-month + .history-month { margin-top:10px; }
+    .history-year > summary,.history-month > summary { display:flex; align-items:center; justify-content:space-between; padding:18px 20px; color:var(--text); list-style:none; cursor:pointer; font-weight:800; }
+    .history-month > summary { padding:15px 18px; font-size:15px; }
+    .history-year > summary::-webkit-details-marker,.history-month > summary::-webkit-details-marker { display:none; }
+    .history-summary { color:var(--muted); font-size:12px; font-weight:600; }
+    .history-body { padding:0 12px 12px; }
+    .history-month .history-body { display:grid; gap:10px; }
+    .day { padding:17px 19px; border:1px solid var(--border); border-radius:16px; background:var(--surface); }
+    .day-summary { display:grid; grid-template-columns:1.4fr repeat(4,1fr); gap:14px; align-items:center; }
+    .day-date { font-weight:800; }
+    .day-metric span { display:block; color:var(--muted); font-size:11px; text-transform:uppercase; }
+    .day-metric strong { display:block; margin-top:4px; font-size:14px; }
+    details { margin-top:12px; padding-top:10px; border-top:1px solid var(--border); }
+    summary { color:var(--green); cursor:pointer; font-size:13px; font-weight:700; }
+    .meal { display:flex; justify-content:space-between; gap:12px; padding:9px 0; color:var(--muted); font-size:13px; border-bottom:1px solid var(--border); }
+    .empty { padding:42px 18px; text-align:center; color:var(--muted); border:1px dashed var(--border); border-radius:16px; }
+    .note { margin-top:28px; color:var(--muted); font-size:12px; line-height:1.6; }
+    @media (max-width:900px) { .today-grid { grid-template-columns:repeat(3,1fr); } .stats-grid { grid-template-columns:repeat(2,1fr); } .day-summary { grid-template-columns:1fr 1fr; } }
+    @media (max-width:560px) { .header-inner { align-items:flex-start; flex-direction:column; } main { padding:20px 16px 60px; } .card { padding:20px; } .today-grid,.stats-grid,.weight-summary { grid-template-columns:1fr; } .section-head { align-items:stretch; flex-direction:column; } .section-head select { width:100%; } .weight-controls { justify-content:space-between; } }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="header-inner">
+      <div class="brand"><img class="logo" src="./assets/icon.png" alt="Run Green icon" /><div><h1>Green Nutrition</h1><div class="subtitle">Private nutrition dashboard</div></div></div>
+      <div id="signedActions" class="actions hidden"><a class="button" href="index.html">Activity dashboard</a><button onclick="loadNutrition()">Refresh</button><button class="danger" onclick="signOut()">Sign out</button></div>
+    </div>
+  </header>
+  <main>
+    <section id="loginCard" class="card login">
+      <h2>Nutrition sign in</h2>
+      <p class="muted">Use the same account as Run Green or Bike Ride Green.</p>
+      <div class="field"><label for="email">Email</label><input id="email" type="email" autocomplete="email" /></div>
+      <div class="field"><label for="password">Password</label><input id="password" type="password" autocomplete="current-password" /></div>
+      <button id="loginButton" class="primary" onclick="signIn()">Sign in</button>
+      <div id="loginStatus" class="status"></div>
+    </section>
+
+    <section id="dashboard" class="card hidden">
+      <h2>Nutrition overview</h2>
+      <p class="muted">Shared Green Sync data from Run Green and Bike Ride Green.</p>
+      <div class="today-grid">
+        <div class="stat"><div class="stat-label">Today eaten</div><div id="todayEaten" class="stat-value eaten-value">0 kcal</div></div>
+        <div class="stat"><div class="stat-label">Today burned</div><div id="todayBurned" class="stat-value burned-value">0 kcal</div></div>
+        <div class="stat"><div class="stat-label">Today net</div><div id="todayNet" class="stat-value">0 kcal</div></div>
+        <div class="stat"><div class="stat-label">Daily goal</div><div id="todayGoal" class="stat-value">—</div></div>
+        <div class="stat"><div class="stat-label">Remaining</div><div id="todayRemaining" class="stat-value accent">—</div></div>
+      </div>
+
+      <div class="section">
+        <div class="section-head"><div><h3>Statistics</h3><div class="muted">Calories eaten, burned, and net for the selected period.</div></div><select id="period" onchange="renderNutrition()"><option value="7">Last 7 days</option><option value="30" selected>Last 30 days</option><option value="90">Last 90 days</option><option value="365">Last year</option></select></div>
+        <div class="stats-grid">
+          <div class="stat"><div class="stat-label">Total eaten</div><div id="periodEaten" class="stat-value">0 kcal</div></div>
+          <div class="stat"><div class="stat-label">Total burned</div><div id="periodBurned" class="stat-value">0 kcal</div></div>
+          <div class="stat"><div class="stat-label">Average eaten / day</div><div id="averageEaten" class="stat-value">0 kcal</div></div>
+          <div class="stat"><div class="stat-label">Latest weight</div><div id="latestWeight" class="stat-value">—</div></div>
+        </div>
+        <div class="chart-wrap"><canvas id="nutritionChart"></canvas></div>
+      </div>
+
+      <div class="section">
+        <div class="section-head weight-head">
+          <div><h3>Monthly weight averages</h3><div class="muted">Average weight for each month in the selected year.</div></div>
+          <div class="weight-controls"><button id="previousWeightYear" onclick="changeWeightYear(-1)" aria-label="Previous year">‹</button><span id="weightYear" class="weight-year"></span><button id="nextWeightYear" onclick="changeWeightYear(1)" aria-label="Next year">›</button></div>
+        </div>
+        <div class="weight-summary">
+          <div class="stat"><div id="weightMonthLabel" class="stat-label">Current month average</div><div id="currentMonthWeight" class="stat-value accent">—</div></div>
+          <div class="stat"><div class="stat-label">Monthly comparison</div><div class="muted" style="margin-top:9px;line-height:1.5"><strong style="color:#0a84ff">Blue</strong> is the first recorded month. <strong style="color:#22c55e">Green</strong> means lower than the previous recorded month. <strong style="color:#ef4444">Red</strong> means higher.</div></div>
+        </div>
+        <div class="chart-wrap weight-chart-wrap"><canvas id="weightChart"></canvas></div>
+      </div>
+
+      <div class="section">
+        <div class="section-head"><div><h3>Daily nutrition</h3><div class="muted">Daily totals and synchronized meal details.</div></div></div>
+        <div id="dailyList" class="daily-list"></div>
+      </div>
+      <p class="note">Nutrition information is for personal tracking and general guidance only. It is not medical advice.</p>
+    </section>
+  </main>
+  <script>
+    const SUPABASE_URL = "https://wstnsrizuhzezectivwf.supabase.co";
+    const SUPABASE_KEY = "sb_publishable_GE5PhqdYjJ3RCcXgkJxjeA_Ry9Oh-Oz";
+    const client = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    let currentUser = null;
+    let meals = [], dailyTotals = [], activities = [], weights = [], goals = [];
+    let nutritionChart = null;
+    let weightChart = null;
+    let selectedWeightYear = new Date().getFullYear();
+
+    async function checkSession() {
+      const { data } = await client.auth.getSession();
+      if (data.session?.user) { currentUser = data.session.user; showDashboard(); await loadNutrition(); }
+    }
+
+    async function signIn() {
+      const email = document.getElementById("email").value.trim();
+      const password = document.getElementById("password").value;
+      if (!email || !password) return setStatus("Please enter your email and password.");
+      document.getElementById("loginButton").disabled = true;
+      const { data, error } = await client.auth.signInWithPassword({ email, password });
+      document.getElementById("loginButton").disabled = false;
+      if (error) return setStatus(error.message);
+      currentUser = data.user; showDashboard(); await loadNutrition();
+    }
+
+    async function signOut() { await client.auth.signOut(); location.reload(); }
+    function setStatus(message) { document.getElementById("loginStatus").textContent = message || ""; }
+    function showDashboard() { document.getElementById("loginCard").classList.add("hidden"); document.getElementById("dashboard").classList.remove("hidden"); document.getElementById("signedActions").classList.remove("hidden"); }
+
+    async function loadNutrition() {
+      if (!currentUser) return;
+      const user = currentUser.id;
+      const results = await Promise.all([
+        client.from("green_sync_meals").select("*").eq("user_id", user).is("deleted_at", null).order("meal_date", { ascending:false }),
+        client.from("green_sync_daily_totals").select("*").eq("user_id", user).is("deleted_at", null).order("intake_date", { ascending:false }),
+        client.from("green_sync_activities").select("*").eq("user_id", user).is("deleted_at", null).order("activity_date", { ascending:false }),
+        client.from("green_sync_weight_entries").select("*").eq("user_id", user).is("deleted_at", null).order("recorded_at", { ascending:false }),
+        client.from("green_sync_calorie_goals").select("*").eq("user_id", user).order("effective_at", { ascending:false })
+      ]);
+      const failed = results.find(result => result.error);
+      if (failed) { document.getElementById("dailyList").innerHTML = `<div class="empty">Could not load nutrition: ${escapeHtml(failed.error.message)}</div>`; return; }
+      [meals, dailyTotals, activities, weights, goals] = results.map(result => result.data || []);
+      const availableYears = weightYears();
+      if (!availableYears.includes(selectedWeightYear)) {
+        selectedWeightYear = availableYears[availableYears.length - 1] || new Date().getFullYear();
+      }
+      renderNutrition();
+    }
+
+    function renderNutrition() {
+      const days = Number(document.getElementById("period").value) || 30;
+      const today = dateKey(new Date());
+      const dates = Array.from({ length:days }, (_, index) => { const d = new Date(); d.setHours(12,0,0,0); d.setDate(d.getDate() - (days - index - 1)); return dateKey(d); });
+      const daily = dates.map(buildDay);
+      const todayData = buildDay(today);
+      const goal = activeGoal(today);
+      const remaining = goal ? goal - todayData.eaten : null;
+      setText("todayEaten", kcal(todayData.eaten));
+      setText("todayBurned", kcal(todayData.burned));
+      setText("todayNet", kcal(todayData.net));
+      setText("todayGoal", goal ? kcal(goal) : "—");
+      setText("todayRemaining", remaining === null ? "—" : kcal(remaining));
+      setOverLimit("todayEaten", Boolean(goal && todayData.eaten > goal));
+      setOverLimit("todayRemaining", remaining !== null && remaining < 0);
+      const eaten = sum(daily,"eaten"), burned = sum(daily,"burned");
+      setText("periodEaten", kcal(eaten)); setText("periodBurned", kcal(burned)); setText("averageEaten", kcal(eaten / days)); setText("latestWeight", weights.length ? `${number(weights[0].weight_kg,1)} kg` : "—");
+      renderChart(daily);
+      renderWeightChart();
+      const visible = [...new Set([...meals.map(m => m.meal_date), ...dailyTotals.map(t => t.intake_date), ...activities.map(a => dateKey(a.activity_date))])].filter(Boolean).sort().reverse().map(buildDay);
+      document.getElementById("dailyList").innerHTML = visible.length ? groupedHistoryHTML(visible) : '<div class="empty">No synchronized nutrition information yet.</div>';
+    }
+
+    function buildDay(date) {
+      const total = dailyTotals.find(row => row.intake_date === date);
+      const dayMeals = meals.filter(row => row.meal_date === date);
+      const eaten = total ? Number(total.calories) || 0 : dayMeals.reduce((sum,row) => sum + (Number(row.calories) || 0),0);
+      const burned = activities.filter(row => dateKey(row.activity_date) === date).reduce((sum,row) => sum + (Number(row.calories_burned) || 0),0);
+      return { date, eaten, burned, net:eaten-burned, meals:dayMeals, manual:Boolean(total) };
+    }
+
+    function activeGoal(date) {
+      if (!goals.length) return 0;
+      const ordered = [...goals].sort((a,b) => String(a.effective_at).localeCompare(String(b.effective_at)));
+      const eligible = ordered.filter(goal => dateKey(goal.effective_at) <= date);
+      const selected = eligible.length ? eligible[eligible.length - 1] : ordered[0];
+      return Number(selected.calories) || 0;
+    }
+    function renderChart(daily) { if (nutritionChart) nutritionChart.destroy(); nutritionChart = new Chart(document.getElementById("nutritionChart"), { type:"bar", data:{ labels:daily.map(day => shortDate(day.date)), datasets:[{ label:"Eaten", data:daily.map(day => day.eaten), backgroundColor:daily.map(day => activeGoal(day.date) && day.eaten > activeGoal(day.date) ? "rgba(239,68,68,.72)" : "rgba(249,115,22,.68)"), borderRadius:5 },{ label:"Burned", data:daily.map(day => day.burned), backgroundColor:"rgba(34,197,94,.68)", borderRadius:5 }] }, options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{ labels:{ color:"#8a958f" } } }, scales:{ x:{ stacked:false, ticks:{ color:"#8a958f", maxRotation:0, autoSkip:true }, grid:{ display:false } }, y:{ beginAtZero:true, ticks:{ color:"#8a958f", callback:value => `${value} kcal` }, grid:{ color:"rgba(128,128,128,.12)" } } } } }); }
+
+    function weightYears() {
+      const years = [...new Set(weights.map(row => Number(dateKey(row.recorded_at).slice(0,4))).filter(Boolean))].sort((a,b) => a-b);
+      return years.length ? years : [new Date().getFullYear()];
+    }
+
+    function changeWeightYear(direction) {
+      const years = weightYears();
+      const index = years.indexOf(selectedWeightYear);
+      const nextIndex = Math.max(0, Math.min(years.length - 1, index + direction));
+      selectedWeightYear = years[nextIndex];
+      renderWeightChart();
+    }
+
+    function renderWeightChart() {
+      const years = weightYears();
+      const yearIndex = years.indexOf(selectedWeightYear);
+      document.getElementById("weightYear").textContent = selectedWeightYear;
+      document.getElementById("previousWeightYear").disabled = yearIndex <= 0;
+      document.getElementById("nextWeightYear").disabled = yearIndex < 0 || yearIndex >= years.length - 1;
+
+      const monthly = Array.from({ length:12 }, (_, month) => {
+        const values = weights
+          .filter(row => {
+            const date = localDate(dateKey(row.recorded_at));
+            return date.getFullYear() === selectedWeightYear && date.getMonth() === month;
+          })
+          .map(row => Number(row.weight_kg))
+          .filter(value => value > 0);
+        if (!values.length) return null;
+        return {
+          minimum: Math.min(...values),
+          maximum: Math.max(...values),
+          average: values.reduce((total,value) => total + value,0) / values.length,
+          count: values.length
+        };
+      });
+
+      const currentMonth = new Date().getMonth();
+      const currentAverage = monthly[currentMonth]?.average;
+      document.getElementById("weightMonthLabel").textContent = `${monthName(currentMonth)} ${selectedWeightYear} average`;
+      document.getElementById("currentMonthWeight").textContent = currentAverage ? `${number(currentAverage,1)} kg` : "—";
+
+      let previousAverage = null;
+      const monthlyColors = monthly.map(item => {
+        if (!item) return "rgba(0,0,0,0)";
+        let color = "rgba(10,132,255,.88)";
+        if (previousAverage !== null) {
+          color = item.average < previousAverage
+            ? "rgba(34,197,94,.86)"
+            : item.average > previousAverage
+              ? "rgba(239,68,68,.86)"
+              : "rgba(10,132,255,.88)";
+        }
+        previousAverage = item.average;
+        return color;
+      });
+
+      const weightValueLabels = {
+        id:"weightValueLabels",
+        afterDatasetsDraw(chart) {
+          const meta = chart.getDatasetMeta(0);
+          const context = chart.ctx;
+          context.save();
+          context.fillStyle = "#6e6e73";
+          context.font = "600 12px Inter, sans-serif";
+          context.textAlign = "center";
+          monthly.forEach((item,index) => {
+            if (!item || !meta.data[index]) return;
+            context.fillText(number(item.average,1), meta.data[index].x, meta.data[index].y - 7);
+          });
+          context.restore();
+        }
+      };
+
+      if (weightChart) weightChart.destroy();
+      weightChart = new Chart(document.getElementById("weightChart"), {
+        type:"bar",
+        data:{
+          labels:Array.from({ length:12 }, (_,month) => monthName(month,true)),
+          datasets:[{
+            label:"Monthly average",
+            data:monthly.map(item => item?.average ?? null),
+            backgroundColor:monthlyColors,
+            borderColor:monthlyColors,
+            borderWidth:1,
+            borderRadius:7,
+            barPercentage:.58,
+            categoryPercentage:.72
+          }]
+        },
+        plugins:[weightValueLabels],
+        options:{
+          responsive:true,
+          maintainAspectRatio:false,
+          interaction:{ mode:"index",intersect:false },
+          plugins:{
+            legend:{ display:false },
+            tooltip:{ callbacks:{ label:context => {
+              const item = monthly[context.dataIndex];
+              if (!item) return "No weight entries";
+              return `Average: ${number(item.average,1)} kg (${item.count} entr${item.count === 1 ? "y" : "ies"})`;
+            } } }
+          },
+          scales:{
+            x:{ ticks:{ color:"#8a958f" },grid:{ display:false } },
+            y:{ beginAtZero:true,suggestedMax:100,ticks:{ color:"#8a958f",callback:value => `${value} kg` },grid:{ color:"rgba(128,128,128,.12)" } }
+          }
+        }
+      });
+    }
+    function groupedHistoryHTML(days) {
+      const years = {};
+      days.forEach(day => {
+        const year = day.date.slice(0,4);
+        const month = day.date.slice(0,7);
+        years[year] ||= {};
+        years[year][month] ||= [];
+        years[year][month].push(day);
+      });
+
+      return Object.keys(years).sort().reverse().map((year, yearIndex) => {
+        const months = years[year];
+        const yearDays = Object.values(months).flat();
+        const monthHTML = Object.keys(months).sort().reverse().map((month, monthIndex) => {
+          const monthDays = months[month];
+          return `<details class="history-month" ${yearIndex === 0 && monthIndex === 0 ? "open" : ""}>
+            <summary><span>${escapeHtml(monthTitle(month))}</span><span class="history-summary">${monthDays.length} day${monthDays.length === 1 ? "" : "s"} · ${kcal(sum(monthDays,"eaten"))} eaten</span></summary>
+            <div class="history-body">${monthDays.map(dayHTML).join("")}</div>
+          </details>`;
+        }).join("");
+        return `<details class="history-year" ${yearIndex === 0 ? "open" : ""}>
+          <summary><span>${escapeHtml(year)}</span><span class="history-summary">${yearDays.length} recorded day${yearDays.length === 1 ? "" : "s"}</span></summary>
+          <div class="history-body">${monthHTML}</div>
+        </details>`;
+      }).join("");
+    }
+
+    function dayHTML(day) {
+      const goal = activeGoal(day.date);
+      const over = Boolean(goal && day.eaten > goal);
+      const details = day.manual ? '<div class="meal"><span>Manual daily total</span><strong>Replaces meal entries</strong></div>' : day.meals.map(meal => `<div class="meal"><span>${escapeHtml(meal.name)} · ${escapeHtml(meal.meal_category || "Meal")}</span><strong>${kcal(meal.calories)}</strong></div>`).join("");
+      return `<article class="day"><div class="day-summary"><div class="day-date">${escapeHtml(longDate(day.date))}</div><div class="day-metric"><span>Eaten</span><strong class="eaten-value ${over ? "over-limit" : ""}">${kcal(day.eaten)}</strong></div><div class="day-metric"><span>Burned</span><strong class="burned-value">${kcal(day.burned)}</strong></div><div class="day-metric"><span>Net</span><strong>${kcal(day.net)}</strong></div><div class="day-metric"><span>Goal</span><strong>${goal ? kcal(goal) : "—"}</strong></div></div>${details ? `<details><summary>${day.manual ? "Daily total details" : `${day.meals.length} meal${day.meals.length === 1 ? "" : "s"}`}</summary>${details}</details>` : ""}</article>`;
+    }
+    function dateKey(value) { if (!value) return ""; if (typeof value === "string") return value.slice(0,10); const y=value.getFullYear(),m=String(value.getMonth()+1).padStart(2,"0"),d=String(value.getDate()).padStart(2,"0"); return `${y}-${m}-${d}`; }
+    function localDate(value) { const [y,m,d] = String(value).slice(0,10).split("-").map(Number); return new Date(y,m-1,d); }
+    function shortDate(value) { return localDate(value).toLocaleDateString(undefined,{ month:"short",day:"numeric" }); }
+    function longDate(value) { return localDate(value).toLocaleDateString(undefined,{ weekday:"short",year:"numeric",month:"short",day:"numeric" }); }
+    function monthTitle(value) { return localDate(`${value}-01`).toLocaleDateString(undefined,{ month:"long",year:"numeric" }); }
+    function monthName(month,short=false) { return new Date(2000,month,1).toLocaleDateString(undefined,{ month:short ? "short" : "long" }); }
+    function kcal(value) { return `${Math.round(Number(value) || 0).toLocaleString()} kcal`; }
+    function number(value,digits) { return (Number(value)||0).toLocaleString(undefined,{ minimumFractionDigits:digits,maximumFractionDigits:digits }); }
+    function sum(rows,key) { return rows.reduce((total,row) => total + (Number(row[key]) || 0),0); }
+    function setText(id,value) { document.getElementById(id).textContent = value; }
+    function setOverLimit(id,isOver) { document.getElementById(id).classList.toggle("over-limit", isOver); }
+    function escapeHtml(value) { return String(value ?? "").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'","&#039;"); }
+    checkSession();
+  </script>
+</body>
+</html>
