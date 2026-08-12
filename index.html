@@ -973,6 +973,7 @@
       <div id="signedInActions" class="top-actions hidden">
         <div id="userDisplayName" class="user-pill"></div>
         <button class="btn-ghost" onclick="toggleSettings()">Settings</button>
+        <button class="btn-ghost" onclick="openNutrition()">Nutrition</button>
         <button class="btn-ghost" onclick="refreshDashboard()">Refresh</button>
         <button class="btn-danger-soft" onclick="signOut()">Sign out</button>
       </div>
@@ -1076,8 +1077,8 @@
         </div>
 
         <div class="dash-header">
-          <h2 id="dashboardTitle">My Run & Walk dashboard</h2>
-          <p class="dash-helper">Uploaded summaries from the Run Green app.</p>
+          <h2 id="dashboardTitle">My activity dashboard</h2>
+          <p class="dash-helper">Your uploaded rides, runs, and walks in one private view.</p>
         </div>
 
         <div class="stat-grid">
@@ -1130,9 +1131,7 @@
     id="activityTypeFilter"
     onchange="selectedChartDate = ''; renderRides()"
   >
-    <option value="">Run &amp; Walk</option>
-    <option value="run">Runs</option>
-    <option value="walk">Walks</option>
+    <option value="">All activities</option>
   </select>
 </div>
 
@@ -1185,6 +1184,7 @@
               <option value="duration">Time</option>
               <option value="benchmark">Activity score</option>
               <option value="pace">Average pace</option>
+              <option value="speed">Average speed</option>
               <option value="elevation">Elevation</option>
               <option value="calories">Calories</option>
             </select>
@@ -1323,7 +1323,7 @@ await refreshDashboard();
         displayNameInput.value = "";
 
         if (dashboardTitle) {
-          dashboardTitle.textContent = "My Run & Walk dashboard";
+          dashboardTitle.textContent = "My activity dashboard";
         }
 
         return;
@@ -1339,7 +1339,7 @@ await refreshDashboard();
       if (dashboardTitle) {
         dashboardTitle.textContent = displayName
           ? `${displayName}'s activity dashboard`
-          : "My Run & Walk dashboard";
+          : "My activity dashboard";
       }
     }
 
@@ -1396,7 +1396,7 @@ await refreshDashboard();
       if (dashboardTitle) {
         dashboardTitle.textContent = data.display_name
           ? `${data.display_name}'s activity dashboard`
-          : "My Run & Walk dashboard";
+          : "My activity dashboard";
       }
 
       settingsStatus.classList.add("success");
@@ -1731,19 +1731,37 @@ function groupMemberHTML(member, group) {
     async function loadRides() {
       if (!currentUser) return;
 
-      const { data, error } = await client
-        .from("run_activities")
-        .select("*")
-        .eq("user_id", currentUser.id)
-        .order("activity_date", { ascending: false });
+      const [runResult, bikeResult] = await Promise.all([
+        client.from("run_activities").select("*").eq("user_id", currentUser.id),
+        client.from("rides").select("*").eq("user_id", currentUser.id)
+      ]);
 
-      if (error) {
+      if (runResult.error || bikeResult.error) {
+        const error = runResult.error || bikeResult.error;
         document.getElementById("ridesList").innerHTML =
           `<div class="empty">Could not load activities: ${escapeHtml(error.message)}</div>`;
         return;
       }
 
-      allRides = data || [];
+      const runActivities = (runResult.data || []).map(activity => ({
+        ...activity,
+        activity_type: activity.activity_type === "walk" ? "walk" : "run"
+      }));
+
+      const bikeActivities = (bikeResult.data || []).map(ride => ({
+        ...ride,
+        activity_day: ride.ride_day || ride.ride_date,
+        activity_date: ride.ride_date,
+        activity_type: "bike",
+        activity_score: ride.personal_benchmark,
+        local_activity_id: ride.local_ride_id
+      }));
+
+      allRides = [...runActivities, ...bikeActivities].sort((a, b) =>
+        String(b.activity_day || b.activity_date || "")
+          .localeCompare(String(a.activity_day || a.activity_date || ""))
+      );
+      populateActivityTypeFilter();
       populateYearFilter();
       renderRides();
     }
@@ -1989,6 +2007,7 @@ ridesList.innerHTML = visibleRides.map(activity => rideCardHTML(activity)).join(
       const benchmark = safeNumber(activity.activity_score);
       const distance = safeNumber(activity.distance_value);
       const avgPace = safeNumber(activity.average_pace_seconds);
+      const avgSpeed = safeNumber(activity.average_speed_value);
       const elevation = safeNumber(activity.elevation_gain_value);
       const calories = activity.calories ?? 0;
       const duration = formatDuration(activity.duration_seconds || 0);
@@ -2011,8 +2030,10 @@ ridesList.innerHTML = visibleRides.map(activity => rideCardHTML(activity)).join(
           </div>
 
           <div>
-            <div class="metric-label">Average pace</div>
-            <div class="metric-value">${escapeHtml(formatPace(avgPace, activity.pace_unit))}</div>
+            <div class="metric-label">${activity.activity_type === "bike" ? "Average speed" : "Average pace"}</div>
+            <div class="metric-value">${activity.activity_type === "bike"
+              ? `${formatNumber(avgSpeed, 1)} ${escapeHtml(speedUnitLabel(activity.speed_unit))}`
+              : escapeHtml(formatPace(avgPace, activity.pace_unit))}</div>
           </div>
 
           <div>
@@ -2072,6 +2093,13 @@ ridesList.innerHTML = visibleRides.map(activity => rideCardHTML(activity)).join(
         return {
           background: "rgba(239,68,68,0.62)",
           hover: "rgba(248,113,113,0.86)"
+        };
+      }
+
+      if (metric === "speed") {
+        return {
+          background: "rgba(168,85,247,0.62)",
+          hover: "rgba(192,132,252,0.86)"
         };
       }
 
@@ -2264,7 +2292,8 @@ ridesList.innerHTML = visibleRides.map(activity => rideCardHTML(activity)).join(
       if (metric === "distance") return sum(activities, "distance_value");
       if (metric === "duration") return activities.reduce((t, r) => t + (Number(r.duration_seconds) || 0), 0) / 3600;
       if (metric === "benchmark") return average(activities, "activity_score");
-      if (metric === "pace") return average(activities, "average_pace_seconds");
+      if (metric === "pace") return averagePositive(activities, "average_pace_seconds");
+      if (metric === "speed") return averagePositive(activities, "average_speed_value");
       if (metric === "elevation") return sum(activities, "elevation_gain_value");
       if (metric === "calories") return activities.reduce((t, r) => t + (Number(r.calories) || 0), 0);
       return 0;
@@ -2309,6 +2338,15 @@ ridesList.innerHTML = visibleRides.map(activity => rideCardHTML(activity)).join(
         };
       }
 
+      if (metric === "speed") {
+        return {
+          label: "Average speed",
+          unit: speedUnitLabel(f.speed_unit) || "km/h",
+          shortUnit: " km/h",
+          decimals: 1
+        };
+      }
+
       if (metric === "elevation") {
         return {
           label: "Elevation",
@@ -2338,6 +2376,11 @@ ridesList.innerHTML = visibleRides.map(activity => rideCardHTML(activity)).join(
     function average(rows, key) {
       if (!rows.length) return 0;
       return rows.reduce((s, r) => s + (Number(r[key]) || 0), 0) / rows.length;
+    }
+
+    function averagePositive(rows, key) {
+      const values = rows.map(row => Number(row[key])).filter(value => value > 0);
+      return values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : 0;
     }
 
     function localDateFromYMD(value) {
@@ -2410,6 +2453,30 @@ function formatChartMonth(value) {
         years.map(y => `<option value="${y}">${y}</option>`).join("");
 
       if (years.includes(existing)) yearFilter.value = existing;
+    }
+
+    function populateActivityTypeFilter() {
+      const filter = document.getElementById("activityTypeFilter");
+      if (!filter) return;
+
+      const existing = filter.value;
+      const available = ["bike", "run", "walk"].filter(type =>
+        allRides.some(activity => activity.activity_type === type)
+      );
+      const labels = { bike: "Rides", run: "Runs", walk: "Walks" };
+      const options = available.length > 1
+        ? ['<option value="">All activities</option>']
+        : [];
+
+      available.forEach(type => {
+        options.push(`<option value="${type}">${labels[type]}</option>`);
+      });
+
+      filter.innerHTML = options.join("");
+      filter.value = available.includes(existing)
+        ? existing
+        : (available.length === 1 ? available[0] : "");
+      filter.classList.toggle("hidden", available.length < 2);
     }
 
     async function showDashboard(user) {
@@ -2539,7 +2606,17 @@ function formatChartMonth(value) {
 }
 
     function activityTypeLabel(type) {
+      if (type === "bike") return "Ride";
       return type === "walk" ? "Walk" : "Run";
+    }
+
+    function speedUnitLabel(unit) {
+      if (unit === "kmh") return "km/h";
+      return unit || "";
+    }
+
+    function openNutrition() {
+      window.location.href = "nutrition.html";
     }
 
     function formatPace(totalSeconds, unit) {
