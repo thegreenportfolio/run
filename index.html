@@ -1405,6 +1405,7 @@ await refreshDashboard();
 
     async function createRideGroup() {
   if (!currentUser) return;
+  await ensureProfileEmail(currentUser);
 
   const groupStatus = document.getElementById("groupStatus");
   const nameInput = document.getElementById("groupNameInput");
