@@ -368,6 +368,11 @@
       const { data } = await client.auth.getSession();
 
       if (data.session && data.session.user) {
+        const profileError = await ensureProfile(data.session.user);
+        if (profileError) {
+          showStatus(profileError);
+          return;
+        }
         loginForm.classList.add("hidden");
         joinedActions.classList.remove("hidden");
         showStatus("You are signed in. Click Join group to accept the invite.", true);
@@ -386,7 +391,7 @@
       setLoading(true);
       showStatus("");
 
-      const { error } = await client.auth.signInWithPassword({
+      const { data, error } = await client.auth.signInWithPassword({
         email,
         password
       });
@@ -397,12 +402,26 @@
         return;
       }
 
+      const profileError = await ensureProfile(data.user);
+      if (profileError) {
+        setLoading(false);
+        showStatus(profileError);
+        return;
+      }
+
       await joinGroup();
     }
 
     async function joinGroup() {
       if (!inviteCode) {
         showStatus("This invite link is missing a code.");
+        return;
+      }
+
+      const { data: sessionData } = await client.auth.getSession();
+      const profileError = await ensureProfile(sessionData.session?.user);
+      if (profileError) {
+        showStatus(profileError);
         return;
       }
 
@@ -435,6 +454,19 @@
 
     function goToDashboard() {
       window.location.href = "https://run.thegreenportfolio.ca/";
+    }
+
+    async function ensureProfile(user) {
+      if (!user?.id) return "Please sign in before joining the group.";
+
+      const { error } = await client
+        .from("profiles")
+        .upsert({
+          id: user.id,
+          email: user.email || null
+        }, { onConflict: "id" });
+
+      return error ? `Could not prepare your profile: ${error.message}` : "";
     }
 
     function setLoading(loading) {
