@@ -373,7 +373,17 @@
       const details = day.manual ? '<div class="meal"><span>Manual daily total</span><strong>Replaces meal entries</strong></div>' : day.meals.map(meal => `<div class="meal"><span>${escapeHtml(meal.name)} · ${escapeHtml(meal.meal_category || "Meal")}</span><strong>${kcal(meal.calories)}</strong></div>`).join("");
       return `<article class="day"><div class="day-summary"><div class="day-date">${escapeHtml(longDate(day.date))}</div><div class="day-metric"><span>Eaten</span><strong class="eaten-value ${over ? "over-limit" : ""}">${kcal(day.eaten)}</strong></div><div class="day-metric"><span>Burned</span><strong class="burned-value">${kcal(day.burned)}</strong></div><div class="day-metric"><span>Net</span><strong>${kcal(day.net)}</strong></div><div class="day-metric"><span>Goal</span><strong>${goal ? kcal(goal) : "—"}</strong></div></div>${details ? `<details><summary>${day.manual ? "Daily total details" : `${day.meals.length} meal${day.meals.length === 1 ? "" : "s"}`}</summary>${details}</details>` : ""}</article>`;
     }
-    function dateKey(value) { if (!value) return ""; if (typeof value === "string") return value.slice(0,10); const y=value.getFullYear(),m=String(value.getMonth()+1).padStart(2,"0"),d=String(value.getDate()).padStart(2,"0"); return `${y}-${m}-${d}`; }
+    function dateKey(value) {
+      if (!value) return "";
+      // Preserve true calendar-only values (meal_date, intake_date), but convert
+      // timestamp values to the viewer's local day. Slicing an ISO timestamp
+      // groups evening activities under the following UTC day in western zones.
+      if (typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
+      const date = value instanceof Date ? value : new Date(value);
+      if (Number.isNaN(date.getTime())) return "";
+      const y=date.getFullYear(),m=String(date.getMonth()+1).padStart(2,"0"),d=String(date.getDate()).padStart(2,"0");
+      return `${y}-${m}-${d}`;
+    }
     function localDate(value) { const [y,m,d] = String(value).slice(0,10).split("-").map(Number); return new Date(y,m-1,d); }
     function shortDate(value) { return localDate(value).toLocaleDateString(undefined,{ month:"short",day:"numeric" }); }
     function longDate(value) { return localDate(value).toLocaleDateString(undefined,{ weekday:"short",year:"numeric",month:"short",day:"numeric" }); }
