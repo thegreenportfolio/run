@@ -145,7 +145,7 @@
     const SUPABASE_KEY = "sb_publishable_GE5PhqdYjJ3RCcXgkJxjeA_Ry9Oh-Oz";
     const client = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
     let currentUser = null;
-    let meals = [], dailyTotals = [], activities = [], weights = [], goals = [];
+    let meals = [], dailyTotals = [], activities = [], stepCalories = [], weights = [], goals = [];
     let nutritionChart = null;
     let weightChart = null;
     let selectedWeightYear = new Date().getFullYear();
@@ -177,12 +177,13 @@
         client.from("green_sync_meals").select("*").eq("user_id", user).is("deleted_at", null).order("meal_date", { ascending:false }),
         client.from("green_sync_daily_totals").select("*").eq("user_id", user).is("deleted_at", null).order("intake_date", { ascending:false }),
         client.from("green_sync_activities").select("*").eq("user_id", user).is("deleted_at", null).order("activity_date", { ascending:false }),
+        client.from("green_sync_step_calories").select("activity_date,calories").eq("user_id", user).order("activity_date", { ascending:false }),
         client.from("green_sync_weight_entries").select("*").eq("user_id", user).is("deleted_at", null).order("recorded_at", { ascending:false }),
         client.from("green_sync_calorie_goals").select("*").eq("user_id", user).order("effective_at", { ascending:false })
       ]);
       const failed = results.find(result => result.error);
       if (failed) { document.getElementById("dailyList").innerHTML = `<div class="empty">Could not load nutrition: ${escapeHtml(failed.error.message)}</div>`; return; }
-      [meals, dailyTotals, activities, weights, goals] = results.map(result => result.data || []);
+      [meals, dailyTotals, activities, stepCalories, weights, goals] = results.map(result => result.data || []);
       const availableYears = weightYears();
       if (!availableYears.includes(selectedWeightYear)) {
         selectedWeightYear = availableYears[availableYears.length - 1] || new Date().getFullYear();
@@ -209,7 +210,7 @@
       setText("periodEaten", kcal(eaten)); setText("periodBurned", kcal(burned)); setText("averageEaten", kcal(eaten / days)); setText("latestWeight", weights.length ? `${number(weights[0].weight_kg,1)} kg` : "—");
       renderChart(daily);
       renderWeightChart();
-      const visible = [...new Set([...meals.map(m => m.meal_date), ...dailyTotals.map(t => t.intake_date), ...activities.map(a => dateKey(a.activity_date))])].filter(Boolean).sort().reverse().map(buildDay);
+      const visible = [...new Set([...meals.map(m => m.meal_date), ...dailyTotals.map(t => t.intake_date), ...activities.map(a => dateKey(a.activity_date)), ...stepCalories.map(s => dateKey(s.activity_date))])].filter(Boolean).sort().reverse().map(buildDay);
       document.getElementById("dailyList").innerHTML = visible.length ? groupedHistoryHTML(visible) : '<div class="empty">No synchronized nutrition information yet.</div>';
     }
 
@@ -217,7 +218,9 @@
       const total = dailyTotals.find(row => row.intake_date === date);
       const dayMeals = meals.filter(row => row.meal_date === date);
       const eaten = total ? Number(total.calories) || 0 : dayMeals.reduce((sum,row) => sum + (Number(row.calories) || 0),0);
-      const burned = activities.filter(row => dateKey(row.activity_date) === date).reduce((sum,row) => sum + (Number(row.calories_burned) || 0),0);
+      const activityBurned = activities.filter(row => dateKey(row.activity_date) === date).reduce((sum,row) => sum + (Number(row.calories_burned) || 0),0);
+      const stepsBurned = stepCalories.filter(row => dateKey(row.activity_date) === date).reduce((sum,row) => sum + (Number(row.calories) || 0),0);
+      const burned = activityBurned + stepsBurned;
       return { date, eaten, burned, net:eaten-burned, meals:dayMeals, manual:Boolean(total) };
     }
 
@@ -287,23 +290,6 @@
         return color;
       });
 
-      const weightValueLabels = {
-        id:"weightValueLabels",
-        afterDatasetsDraw(chart) {
-          const meta = chart.getDatasetMeta(0);
-          const context = chart.ctx;
-          context.save();
-          context.fillStyle = "#6e6e73";
-          context.font = "600 12px Inter, sans-serif";
-          context.textAlign = "center";
-          monthly.forEach((item,index) => {
-            if (!item || !meta.data[index]) return;
-            context.fillText(number(item.average,1), meta.data[index].x, meta.data[index].y - 7);
-          });
-          context.restore();
-        }
-      };
-
       if (weightChart) weightChart.destroy();
       weightChart = new Chart(document.getElementById("weightChart"), {
         type:"bar",
@@ -320,7 +306,6 @@
             categoryPercentage:.72
           }]
         },
-        plugins:[weightValueLabels],
         options:{
           responsive:true,
           maintainAspectRatio:false,
