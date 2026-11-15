@@ -691,6 +691,33 @@
         height: 280px;
       }
     }
+
+    /* Keep mobile grid/flex children within the available inline space. */
+    @media (max-width: 900px) {
+      main, .header-inner { min-width: 0; max-width: 100%; }
+      main *, .header-inner * { min-width: 0; }
+      main { overflow-wrap: anywhere; }
+      .top-actions { flex-wrap: wrap; }
+      input, select, textarea, canvas { max-width: 100%; }
+      button { white-space: normal; overflow-wrap: anywhere; }
+      .group-actions, .chart-control { max-width: 100%; }
+      .member-top { flex-wrap: wrap; }
+      .year-header, .month-header { white-space: normal; overflow-wrap: anywhere; }
+      .year-chevron, .month-chevron { flex-shrink: 0; }
+    }
+    @media (max-width: 520px) {
+      .top-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); width: 100%; }
+      .top-actions button { width: 100%; padding-left: 10px; padding-right: 10px; }
+      .user-pill { grid-column: 1 / -1; max-width: 100%; }
+    }
+
+    .link-confirmation { box-sizing: border-box; width: calc(100% - 32px); max-width: 480px;
+      max-height: 85vh; overflow: auto; margin: auto; padding: 20px; border: 1px solid var(--border);
+      border-radius: 18px; background: var(--surface, #fff); color: var(--text); overflow-wrap: anywhere; }
+    .link-confirmation::backdrop { background: rgba(0,0,0,.5); }
+    .link-confirmation textarea { box-sizing: border-box; display: block; width: 100%; margin: 12px 0;
+      font-size: 16px; user-select: text; -webkit-user-select: text; }
+    .link-confirmation .button-row { display: flex; flex-wrap: wrap; gap: 8px; }
   </style>
 </head>
 
@@ -997,13 +1024,62 @@ async function copyChallengeLink() {
   url.searchParams.delete("start");
   url.searchParams.delete("end");
 
-  try {
-    await navigator.clipboard.writeText(url.toString());
-    alert("Challenge link copied.");
-  } catch {
-    alert(url.toString());
-  }
+  showLinkConfirmation(url.toString(), "Challenge link ready", false);
 }
+
+    function showLinkConfirmation(link, title = "Invite link created", isInvite = true) {
+      const previousFocus = document.activeElement;
+      const dialog = document.createElement("dialog");
+      dialog.className = "link-confirmation";
+      dialog.setAttribute("aria-labelledby", "linkConfirmationTitle");
+      dialog.innerHTML = `<h2 id="linkConfirmationTitle"></h2>
+        <p data-status role="status" aria-live="polite"></p>
+        <label for="linkConfirmationField">Link</label>
+        <textarea id="linkConfirmationField" readonly rows="4"></textarea>
+        <div class="button-row"><button type="button" class="btn-primary" data-copy>Copy Link</button>
+        <button type="button" class="btn-ghost" data-share></button>
+        <button type="button" class="btn-ghost" data-close>Close</button></div>`;
+      dialog.querySelector("h2").textContent = title;
+      const field = dialog.querySelector("textarea");
+      const status = dialog.querySelector("[data-status]");
+      field.value = link;
+      status.textContent = isInvite ? "Send this link to invite someone to your group." : "Share this dashboard link with group members. This link does not grant membership.";
+      const selectLink = () => { field.focus(); field.select(); field.setSelectionRange(0, field.value.length); };
+      const copy = async () => {
+        try {
+          await navigator.clipboard.writeText(link);
+          status.textContent = "Link copied. You can paste it into a message.";
+        } catch {
+          status.textContent = "Touch and hold the link, then choose Copy.";
+          if (dialog.isConnected) selectLink();
+        }
+      };
+      dialog.querySelector("[data-copy]").onclick = copy;
+      const share = dialog.querySelector("[data-share]");
+      share.textContent = isInvite ? "Share Invite" : "Share Link";
+      share.onclick = async () => {
+        if (!navigator.share) {
+          status.textContent = "Sharing is unavailable here. Copy the link and paste it into a message.";
+          selectLink();
+          return;
+        }
+        try { await navigator.share({ title, url: link }); }
+        catch (error) {
+          if (error.name !== "AbortError") {
+            status.textContent = "Sharing is unavailable here. Copy the link and paste it into a message.";
+            selectLink();
+          }
+        }
+      };
+      dialog.querySelector("[data-close]").onclick = () => dialog.close();
+      dialog.addEventListener("close", () => {
+        dialog.remove();
+        if (previousFocus && previousFocus.isConnected) previousFocus.focus();
+      });
+      document.body.appendChild(dialog);
+      dialog.showModal();
+      void copy();
+    }
 
     function getRankedMembers() {
       const members = currentData?.members || [];
@@ -1088,6 +1164,21 @@ function chartValueForMetric(totals, metric) {
       const ranked = getRankedMembers();
       const metricInfo = challengeMetricInfo(selectedMetric, ranked);
       const colors = chartMetricColors(selectedMetric);
+      const horizontal = ranked.length >= 6;
+      const valueAxisTitle = `${metricInfo.label} (${metricInfo.unit})`;
+      const valueTicks = {
+        color: "#8a958f",
+        font: { size: 12 },
+        callback: value => {
+          const numeric = Number(value);
+          if (!Number.isFinite(numeric)) return "";
+          if (selectedMetric === "pace") {
+            const seconds = Math.round(numeric);
+            return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`;
+          }
+          return new Intl.NumberFormat(undefined, { maximumFractionDigits: 2 }).format(numeric);
+        }
+      };
 
       document.getElementById("chartTitle").textContent =
         `${metricInfo.label} ranking`;
@@ -1123,7 +1214,7 @@ function chartValueForMetric(totals, metric) {
         options: {
           responsive: true,
           maintainAspectRatio: false,
-          indexAxis: labels.length >= 6 ? "y" : "x",
+          indexAxis: horizontal ? "y" : "x",
           plugins: {
             legend: {
               labels: {
@@ -1164,29 +1255,15 @@ function chartValueForMetric(totals, metric) {
           scales: {
             x: {
               beginAtZero: true,
-              ticks: {
-                color: "#8a958f",
-                font: {
-                  size: 12
-                }
-              },
-              grid: {
-                color: "rgba(255,255,255,0.05)",
-                drawBorder: false
-              }
+              title: { display: horizontal, text: valueAxisTitle, color: "#8a958f" },
+              ticks: horizontal ? valueTicks : { color: "#8a958f", font: { size: 12 } },
+              grid: { color: "rgba(255,255,255,0.05)", drawBorder: false }
             },
             y: {
               beginAtZero: true,
-              ticks: {
-                color: "#8a958f",
-                font: {
-                  size: 12
-                }
-              },
-              grid: {
-                color: "rgba(255,255,255,0.05)",
-                drawBorder: false
-              }
+              title: { display: !horizontal, text: valueAxisTitle, color: "#8a958f" },
+              ticks: horizontal ? { color: "#8a958f", font: { size: 12 } } : valueTicks,
+              grid: { color: "rgba(255,255,255,0.05)", drawBorder: false }
             }
           }
         }
