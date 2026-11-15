@@ -80,6 +80,88 @@
     .note { margin-top:28px; color:var(--muted); font-size:12px; line-height:1.6; }
     @media (max-width:900px) { .today-grid { grid-template-columns:repeat(3,1fr); } .stats-grid { grid-template-columns:repeat(2,1fr); } .day-summary { grid-template-columns:1fr 1fr; } }
     @media (max-width:560px) { .header-inner { align-items:flex-start; flex-direction:column; } main { padding:20px 16px 60px; } .card { padding:20px; } .today-grid,.stats-grid,.weight-summary { grid-template-columns:1fr; } .section-head { align-items:stretch; flex-direction:column; } .section-head select { width:100%; } .weight-controls { justify-content:space-between; } }
+    
+/* Prevent nutrition dashboard horizontal overflow */
+html, body {
+    width: 100%;
+    max-width: 100%;
+}
+
+.header-inner,
+.brand,
+.actions,
+main,
+.card,
+.section,
+.section-head,
+.weight-controls,
+.weight-summary,
+.stat,
+.chart-wrap {
+    min-width: 0;
+}
+
+.brand {
+    max-width: 100%;
+}
+
+.brand > div {
+    min-width: 0;
+}
+
+.chart-wrap {
+    width: 100%;
+    overflow: hidden;
+}
+
+@media (max-width: 560px) {
+    .header-inner {
+        width: 100%;
+        padding: 12px 16px;
+    }
+
+    .actions {
+        width: 100%;
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .actions > * {
+        min-width: 0;
+        text-align: center;
+        padding: 9px 8px;
+    }
+
+    .card {
+        width: 100%;
+        max-width: 100%;
+    }
+
+    .today-grid,
+    .stats-grid,
+    .weight-summary {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .weight-controls {
+        flex-wrap: wrap;
+    }
+
+    .history-year > summary,
+    .history-month > summary {
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+
+    .day-summary {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .meal {
+        flex-wrap: wrap;
+    }
+}
+
   </style>
 </head>
 <body>
