@@ -731,6 +731,25 @@
         width: 100%;
       }
     }
+
+    /* Keep mobile grid/flex children within the available inline space. */
+    @media (max-width: 900px) {
+      main, .header-inner { min-width: 0; max-width: 100%; }
+      main *, .header-inner * { min-width: 0; }
+      main { overflow-wrap: anywhere; }
+      .top-actions { flex-wrap: wrap; }
+      input, select, textarea, canvas { max-width: 100%; }
+      button { white-space: normal; overflow-wrap: anywhere; }
+      .group-actions, .chart-control { max-width: 100%; }
+      .member-top { flex-wrap: wrap; }
+      .year-header, .month-header { white-space: normal; overflow-wrap: anywhere; }
+      .year-chevron, .month-chevron { flex-shrink: 0; }
+    }
+    @media (max-width: 520px) {
+      .top-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); width: 100%; }
+      .top-actions button { width: 100%; padding-left: 10px; padding-right: 10px; }
+      .user-pill { grid-column: 1 / -1; max-width: 100%; }
+    }
   </style>
 </head>
 
