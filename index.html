@@ -911,6 +911,22 @@
 }
 
     @media (max-width: 700px) {
+      .year-header,
+      .month-header {
+        white-space: normal;
+        overflow-wrap: anywhere;
+      }
+
+      .year-header > div:first-child,
+      .month-header > div:first-child {
+        min-width: 0;
+      }
+
+      .year-chevron,
+      .month-chevron {
+        flex-shrink: 0;
+      }
+
       .chart-header {
         flex-direction: column;
       }
@@ -1597,7 +1613,34 @@ function toggleChallengeDateFields() {
         await navigator.clipboard.writeText(inviteLink);
         alert(`Invite link copied:\n${inviteLink}`);
       } catch {
-        alert(`Invite link created:\n${inviteLink}`);
+        const previousFocus = document.activeElement;
+        const dialog = document.createElement("dialog");
+        dialog.setAttribute("aria-labelledby", "inviteLinkTitle");
+        dialog.style.cssText = "width:calc(100% - 32px);max-width:480px;max-height:85vh;overflow:auto;margin:auto;padding:20px;border:1px solid var(--border);border-radius:18px;background:var(--surface);color:var(--text);";
+        dialog.innerHTML = `
+          <h2 id="inviteLinkTitle">Invite link created</h2>
+          <p>Automatic copying is unavailable. Touch and hold the link below, then choose Copy.</p>
+          <label for="inviteLinkField">Invite link</label>
+          <textarea id="inviteLinkField" readonly rows="4" style="display:block;width:100%;margin:12px 0;font-size:16px;-webkit-user-select:text;user-select:text;"></textarea>
+          <button type="button" class="btn-ghost">Select link</button>
+          <button type="button" class="btn-primary">Done</button>
+        `;
+        const field = dialog.querySelector("textarea");
+        field.value = inviteLink;
+        const selectLink = () => {
+          field.focus();
+          field.select();
+          field.setSelectionRange(0, field.value.length);
+        };
+        dialog.querySelector(".btn-ghost").onclick = selectLink;
+        dialog.querySelector(".btn-primary").onclick = () => dialog.close();
+        dialog.addEventListener("close", () => {
+          dialog.remove();
+          if (previousFocus && previousFocus.isConnected) previousFocus.focus();
+        });
+        document.body.appendChild(dialog);
+        dialog.showModal();
+        selectLink();
       }
     }
 
