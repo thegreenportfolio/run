@@ -352,10 +352,26 @@ main,
         };
       });
 
-      const currentMonth = new Date().getMonth();
-      const currentAverage = monthly[currentMonth]?.average;
-      document.getElementById("weightMonthLabel").textContent = `${monthName(currentMonth)} ${selectedWeightYear} average`;
-      document.getElementById("currentMonthWeight").textContent = currentAverage ? `${number(currentAverage,1)} kg` : "—";
+      const today = new Date();
+const isCurrentYear = selectedWeightYear === today.getFullYear();
+
+const displayMonth = isCurrentYear
+  ? today.getMonth()
+  : monthly.findLastIndex(item => item !== null);
+
+const currentAverage = displayMonth >= 0
+  ? monthly[displayMonth]?.average
+  : null;
+
+document.getElementById("weightMonthLabel").textContent =
+  displayMonth >= 0
+    ? `${monthName(displayMonth)} ${selectedWeightYear} average`
+    : `${selectedWeightYear} — No weight data`;
+
+document.getElementById("currentMonthWeight").textContent =
+  currentAverage != null
+    ? `${number(currentAverage, 1)} kg`
+    : "—";
 
       let previousAverage = null;
       const monthlyColors = monthly.map(item => {
