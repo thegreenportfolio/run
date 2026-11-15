@@ -991,6 +991,33 @@
         text-align: center;
       }
     }
+
+    /* Keep mobile grid/flex children within the available inline space. */
+    @media (max-width: 900px) {
+      main, .header-inner { min-width: 0; max-width: 100%; }
+      main *, .header-inner * { min-width: 0; }
+      main { overflow-wrap: anywhere; }
+      .top-actions { flex-wrap: wrap; }
+      input, select, textarea, canvas { max-width: 100%; }
+      button { white-space: normal; overflow-wrap: anywhere; }
+      .group-actions, .chart-control { max-width: 100%; }
+      .member-top { flex-wrap: wrap; }
+      .year-header, .month-header { white-space: normal; overflow-wrap: anywhere; }
+      .year-chevron, .month-chevron { flex-shrink: 0; }
+    }
+    @media (max-width: 520px) {
+      .top-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); width: 100%; }
+      .top-actions button { width: 100%; padding-left: 10px; padding-right: 10px; }
+      .user-pill { grid-column: 1 / -1; max-width: 100%; }
+    }
+
+    .link-confirmation { box-sizing: border-box; width: calc(100% - 32px); max-width: 480px;
+      max-height: 85vh; overflow: auto; margin: auto; padding: 20px; border: 1px solid var(--border);
+      border-radius: 18px; background: var(--surface, #fff); color: var(--text); overflow-wrap: anywhere; }
+    .link-confirmation::backdrop { background: rgba(0,0,0,.5); }
+    .link-confirmation textarea { box-sizing: border-box; display: block; width: 100%; margin: 12px 0;
+      font-size: 16px; user-select: text; -webkit-user-select: text; }
+    .link-confirmation .button-row { display: flex; flex-wrap: wrap; gap: 8px; }
   </style>
 </head>
 
@@ -1609,39 +1636,61 @@ function toggleChallengeDateFields() {
 
       const inviteLink = `https://run.thegreenportfolio.ca/join.html?code=${encodeURIComponent(inviteCode)}`;
 
-      try {
-        await navigator.clipboard.writeText(inviteLink);
-        alert(`Invite link copied:\n${inviteLink}`);
-      } catch {
-        const previousFocus = document.activeElement;
-        const dialog = document.createElement("dialog");
-        dialog.setAttribute("aria-labelledby", "inviteLinkTitle");
-        dialog.style.cssText = "width:calc(100% - 32px);max-width:480px;max-height:85vh;overflow:auto;margin:auto;padding:20px;border:1px solid var(--border);border-radius:18px;background:var(--surface);color:var(--text);";
-        dialog.innerHTML = `
-          <h2 id="inviteLinkTitle">Invite link created</h2>
-          <p>Automatic copying is unavailable. Touch and hold the link below, then choose Copy.</p>
-          <label for="inviteLinkField">Invite link</label>
-          <textarea id="inviteLinkField" readonly rows="4" style="display:block;width:100%;margin:12px 0;font-size:16px;-webkit-user-select:text;user-select:text;"></textarea>
-          <button type="button" class="btn-ghost">Select link</button>
-          <button type="button" class="btn-primary">Done</button>
-        `;
-        const field = dialog.querySelector("textarea");
-        field.value = inviteLink;
-        const selectLink = () => {
-          field.focus();
-          field.select();
-          field.setSelectionRange(0, field.value.length);
-        };
-        dialog.querySelector(".btn-ghost").onclick = selectLink;
-        dialog.querySelector(".btn-primary").onclick = () => dialog.close();
-        dialog.addEventListener("close", () => {
-          dialog.remove();
-          if (previousFocus && previousFocus.isConnected) previousFocus.focus();
-        });
-        document.body.appendChild(dialog);
-        dialog.showModal();
-        selectLink();
-      }
+      showLinkConfirmation(inviteLink);
+    }
+
+    function showLinkConfirmation(link, title = "Invite link created", isInvite = true) {
+      const previousFocus = document.activeElement;
+      const dialog = document.createElement("dialog");
+      dialog.className = "link-confirmation";
+      dialog.setAttribute("aria-labelledby", "linkConfirmationTitle");
+      dialog.innerHTML = `<h2 id="linkConfirmationTitle"></h2>
+        <p data-status role="status" aria-live="polite"></p>
+        <label for="linkConfirmationField">Link</label>
+        <textarea id="linkConfirmationField" readonly rows="4"></textarea>
+        <div class="button-row"><button type="button" class="btn-primary" data-copy>Copy Link</button>
+        <button type="button" class="btn-ghost" data-share></button>
+        <button type="button" class="btn-ghost" data-close>Close</button></div>`;
+      dialog.querySelector("h2").textContent = title;
+      const field = dialog.querySelector("textarea");
+      const status = dialog.querySelector("[data-status]");
+      field.value = link;
+      status.textContent = isInvite ? "Send this link to invite someone to your group." : "Share this dashboard link with group members. This link does not grant membership.";
+      const selectLink = () => { field.focus(); field.select(); field.setSelectionRange(0, field.value.length); };
+      const copy = async () => {
+        try {
+          await navigator.clipboard.writeText(link);
+          status.textContent = "Link copied. You can paste it into a message.";
+        } catch {
+          status.textContent = "Touch and hold the link, then choose Copy.";
+          if (dialog.isConnected) selectLink();
+        }
+      };
+      dialog.querySelector("[data-copy]").onclick = copy;
+      const share = dialog.querySelector("[data-share]");
+      share.textContent = isInvite ? "Share Invite" : "Share Link";
+      share.onclick = async () => {
+        if (!navigator.share) {
+          status.textContent = "Sharing is unavailable here. Copy the link and paste it into a message.";
+          selectLink();
+          return;
+        }
+        try { await navigator.share({ title, url: link }); }
+        catch (error) {
+          if (error.name !== "AbortError") {
+            status.textContent = "Sharing is unavailable here. Copy the link and paste it into a message.";
+            selectLink();
+          }
+        }
+      };
+      dialog.querySelector("[data-close]").onclick = () => dialog.close();
+      dialog.addEventListener("close", () => {
+        dialog.remove();
+        if (previousFocus && previousFocus.isConnected) previousFocus.focus();
+      });
+      document.body.appendChild(dialog);
+      dialog.showModal();
+      void copy();
     }
 
     async function loadGroups() {
